@@ -5,4 +5,5 @@ plugins {
 
 dependencies {
     api(projects.core.common)
+    implementation(libs.androidx.datastore.preferences)
 }

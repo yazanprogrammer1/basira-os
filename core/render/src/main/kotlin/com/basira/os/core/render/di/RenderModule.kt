@@ -1,7 +1,9 @@
 package com.basira.os.core.render.di
 
 import com.basira.os.core.render.Compositor
-import com.basira.os.core.render.StubCompositor
+import com.basira.os.core.render.StereoCompositor
+import com.basira.os.core.render.calibration.CalibrationStore
+import com.basira.os.core.render.calibration.DataStoreCalibrationStore
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -14,5 +16,9 @@ internal abstract class RenderModule {
 
     @Binds
     @Singleton
-    abstract fun bindCompositor(impl: StubCompositor): Compositor
+    abstract fun bindCompositor(impl: StereoCompositor): Compositor
+
+    @Binds
+    @Singleton
+    abstract fun bindCalibrationStore(impl: DataStoreCalibrationStore): CalibrationStore
 }
