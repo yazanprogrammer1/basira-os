@@ -29,4 +29,6 @@ data class ThermalSnapshot(
     val status: ThermalStatus,
     val headroom: Float?,
     val timestampMs: Long,
+    /** Battery temperature in degrees C (the closest public proxy for how hot the phone feels). */
+    val batteryTempC: Float? = null,
 )

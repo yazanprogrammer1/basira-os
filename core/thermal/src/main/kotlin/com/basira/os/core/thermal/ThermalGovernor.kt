@@ -1,10 +1,17 @@
 package com.basira.os.core.thermal
 
+import com.basira.os.core.common.coroutines.ApplicationScope
+import com.basira.os.core.common.logging.Logger
 import com.basira.os.core.common.quality.QualityLevel
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
+import javax.inject.Singleton
 
 /** Single source of truth for the current quality budget. Every heavy subsystem observes this. */
 interface ThermalGovernor {
@@ -12,10 +19,25 @@ interface ThermalGovernor {
 }
 
 /**
- * Phase 0 stub: always NORMAL.
- * Phase 1 replaces it with a governor driven by [ThermalStatusSource] + [ThermalPolicy] with hysteresis.
+ * Platform readings -> [ThermalPolicy] -> [QualityHysteresis].
+ * Listens only while someone collects (plus 5 s), so it costs nothing on screens that do not render.
  */
-class StubThermalGovernor @Inject constructor() : ThermalGovernor {
-    private val level = MutableStateFlow(QualityLevel.NORMAL)
-    override val qualityLevel: StateFlow<QualityLevel> = level.asStateFlow()
+@Singleton
+class PolicyThermalGovernor @Inject constructor(
+    source: ThermalStatusSource,
+    @ApplicationScope scope: CoroutineScope,
+    logger: Logger,
+) : ThermalGovernor {
+
+    private val hysteresis = QualityHysteresis()
+
+    override val qualityLevel: StateFlow<QualityLevel> = source.snapshots
+        .map { snapshot -> hysteresis.update(ThermalPolicy.qualityFor(snapshot), snapshot.timestampMs) }
+        .distinctUntilChanged()
+        .onEach { logger.d(TAG, "Quality level: $it") }
+        .stateIn(scope, SharingStarted.WhileSubscribed(5_000), QualityLevel.NORMAL)
+
+    private companion object {
+        const val TAG = "Thermal"
+    }
 }
