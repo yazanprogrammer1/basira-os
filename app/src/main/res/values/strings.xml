@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">بصيرة</string>
+
+    <string name="diag_title">بصيرة · التشخيص</string>
+    <string name="diag_subtitle">المرحلة ٠: نتأكد إن جهازك جاهز</string>
+    <string name="diag_copy_report">انسخ التقرير</string>
+    <string name="diag_report_copied">انتسخ التقرير، ابعته بالمحادثة</string>
+    <string name="diag_loading">عم نفحص…</string>
+    <string name="diag_yes">نعم</string>
+    <string name="diag_no">لا</string>
+    <string name="diag_not_available">غير متاح</string>
+
+    <!-- Device -->
+    <string name="diag_section_device">الجهاز</string>
+    <string name="diag_model">الموديل</string>
+    <string name="diag_android">أندرويد</string>
+    <string name="diag_soc">المعالج</string>
+    <string name="diag_screen">الشاشة</string>
+    <string name="diag_refresh">معدل التحديث</string>
+    <string name="diag_gles">OpenGL ES</string>
+    <string name="diag_sustained">وضع الأداء المستدام</string>
+
+    <!-- ARCore -->
+    <string name="diag_section_arcore">ARCore</string>
+    <string name="diag_arcore_supported">الجهاز مدعوم</string>
+    <string name="diag_arcore_installed">مثبّت ومحدّث</string>
+    <string name="diag_arcore_status">الحالة</string>
+    <string name="diag_arcore_installed_ok">مثبّت ومحدّث، جاهز لـ 6DoF</string>
+    <string name="diag_arcore_not_installed">مدعوم بس مش مثبّت</string>
+    <string name="diag_arcore_too_old">مدعوم بس النسخة قديمة</string>
+    <string name="diag_arcore_unsupported">مش مدعوم، رح نشتغل 3DoF</string>
+    <string name="diag_arcore_unknown">ما قدرنا نعرف (جرّب مع نت)</string>
+    <string name="diag_arcore_install">ثبّت ARCore</string>
+    <string name="diag_arcore_recheck">افحص مرة تانية</string>
+
+    <!-- Thermal -->
+    <string name="diag_section_thermal">الحرارة</string>
+    <string name="diag_thermal_status">حالة النظام</string>
+    <string name="diag_thermal_headroom">الهامش (١٠ ثواني)</string>
+    <string name="diag_thermal_quality">مستوى الجودة</string>
+    <string name="thermal_none">طبيعي</string>
+    <string name="thermal_light">دافي شوي</string>
+    <string name="thermal_moderate">دافي</string>
+    <string name="thermal_severe">سخن</string>
+    <string name="thermal_critical">سخن كتير</string>
+    <string name="thermal_emergency">طوارئ</string>
+    <string name="thermal_shutdown">على وشك يطفي</string>
+    <string name="thermal_unknown">غير معروف</string>
+    <string name="quality_normal">عادي</string>
+    <string name="quality_warm">دافي</string>
+    <string name="quality_hot">وضع التبريد</string>
+
+    <!-- Camera -->
+    <string name="diag_section_camera">الكاميرا</string>
+    <string name="diag_camera_permission">صلاحية الكاميرا</string>
+    <string name="diag_camera_granted">مسموحة</string>
+    <string name="diag_camera_denied">مش مسموحة</string>
+    <string name="diag_camera_request">اسمح بالكاميرا</string>
+
+    <!-- Modules -->
+    <string name="diag_section_modules">الوحدات (Hilt)</string>
+    <string name="diag_module_stub">فاضي</string>
+    <string name="diag_module_real">شغّال</string>
+    <string name="diag_keys">مفاتيح السحابة</string>
+    <string name="diag_keys_value">LLM: %1$s · STT: %2$s</string>
+</resources>
