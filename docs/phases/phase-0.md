@@ -50,8 +50,10 @@
 
 | الفحص | النتيجة |
 | --- | --- |
-| موديل الجهاز | |
-| ARCore مدعوم ومثبّت | |
+| موديل الجهاز | OPPO CPH2699، Android 16 (API 36)، Snapdragon SM6450، شاشة 2400×1080 (60Hz حالياً، max 120)، GLES 3.2، بدون sustained performance mode |
+| ARCore مدعوم ومثبّت | ✅ `SUPPORTED_INSTALLED` |
+| الحرارة وقت الراحة | `NONE`، headroom 0.22 |
+| صلاحية الكاميرا وHilt | ✅، و13 binding (3 حقيقيين و10 stubs) |
 | hello_ar_kotlin: fps | |
 | hello_ar_kotlin: الحرارة بعد 10 دقايق (`dumpsys thermalservice`) | |
 | عينة MediaPipe Hand Landmarker: fps | |
