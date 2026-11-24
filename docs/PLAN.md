@@ -60,8 +60,8 @@
 ### 0 · تجهيز وتجارب
 - [ ] تتأكد إن الموبايل موجود بقائمة ARCore، وإن «Google Play Services for AR» مثبّت
 - [ ] تقيس صندوق الـ VR: المسافة بين العدستين، وإذا وجهه مفتوح للكاميرا
-- [ ] repo `basira-os` بالـ modules الفاضية، ومعها Hilt وversion catalog وCI
-- [ ] شاشة تشخيص: ARCore، موديل الجهاز، الحرارة، معدل تحديث الشاشة، ونسخ تقرير الجهاز
+- [x] repo `basira-os` بالـ modules الفاضية، ومعها Hilt وversion catalog وCI
+- [x] شاشة تشخيص: ARCore، موديل الجهاز، الحرارة، معدل تحديث الشاشة، ونسخ تقرير الجهاز
 - [ ] تشغيل عينة ARCore الرسمية (hello_ar_kotlin) على جهازك وقياس الحرارة بعد 10 دقايق
 - [ ] تشغيل عينة MediaPipe Hand Landmarker وقياس الـ fps
 
