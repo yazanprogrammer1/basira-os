@@ -30,7 +30,7 @@ Per frame, on the GL thread:
    - cursor reticle at the gaze hit point
 3. Draw each eye FBO onto its half of the screen with the **barrel distortion shader**:
    `r' = r * (1 + k1*r² + k2*r⁴)`, with chromatic aberration correction optional later.
-4. Late reprojection (phase 8): rotate the final image by the delta between the pose used to render and the newest rotation-vector reading.
+4. Late reprojection (phase 2): rotate the final image by the delta between the pose used to render and the newest rotation-vector reading.
 
 Passthrough note: the camera image is mono. Both eyes get the same camera image (a small per-eye shift is acceptable); only the windows have true stereo depth. This is how Orion-style systems work and it is comfortable.
 
