@@ -8,7 +8,8 @@ import com.basira.os.core.render.FrameStats
  */
 class FrameStatsTracker(
     private val capacity: Int = 120,
-    private val jankThresholdMs: Float = 20f,
+    /** 1.5 vsync at 60 Hz: CPU-side callback times jitter by several ms without a missed vsync. */
+    private val jankThresholdMs: Float = 25f,
 ) {
     private val intervalsMs = FloatArray(capacity)
     private var count = 0

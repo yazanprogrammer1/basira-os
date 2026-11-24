@@ -10,7 +10,7 @@ data class FrameStats(
     val fps: Float = 0f,
     val frameTimeMsAvg: Float = 0f,
     val frameTimeMsP95: Float = 0f,
-    /** Frames slower than 20 ms since rendering started. */
+    /** Frames longer than 1.5 vsync (25 ms), i.e. a likely missed vsync, since rendering started. */
     val jankyFrames: Long = 0L,
     val totalFrames: Long = 0L,
     /** Age of the camera image when it was drawn; -1 when unknown. Approximate motion-to-photon floor. */
