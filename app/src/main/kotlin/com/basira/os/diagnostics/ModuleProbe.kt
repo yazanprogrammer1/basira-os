@@ -1,6 +1,8 @@
 package com.basira.os.diagnostics
 
 import com.basira.os.core.agent.LlmClient
+import com.basira.os.core.common.camera.CameraFrameSource
+import com.basira.os.core.render.calibration.CalibrationStore
 import com.basira.os.core.common.coroutines.DispatcherProvider
 import com.basira.os.core.hands.HandTracker
 import com.basira.os.core.render.Compositor
@@ -41,10 +43,14 @@ class ModuleProbe @Inject constructor(
     spaces: SpacesRepository,
     thermalGovernor: ThermalGovernor,
     thermalSource: ThermalStatusSource,
+    cameraFrames: CameraFrameSource,
+    calibration: CalibrationStore,
 ) {
     val bindings: List<ModuleBinding> = listOf(
         binding(":core:common", "DispatcherProvider", dispatchers),
         binding(":core:render", "Compositor", compositor),
+        binding(":core:render", "CalibrationStore", calibration),
+        binding(":core:tracking", "CameraFrameSource", cameraFrames),
         binding(":core:tracking", "HeadTracker", headTracker),
         binding(":core:tracking", "ArCoreSupport", arCoreSupport),
         binding(":core:windows", "SpatialWindowManager", windowManager),

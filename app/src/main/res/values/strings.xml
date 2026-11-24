@@ -64,4 +64,29 @@
     <string name="diag_module_real">شغّال</string>
     <string name="diag_keys">مفاتيح السحابة</string>
     <string name="diag_keys_value">LLM: %1$s · STT: %2$s</string>
+    <string name="diag_start_passthrough">ابدأ</string>
+    <string name="diag_open_calibration">المعايرة</string>
+
+    <!-- Passthrough -->
+    <string name="session_error_not_installed">ARCore مش مثبّت، ثبّته من شاشة التشخيص</string>
+    <string name="session_error_unsupported">الجهاز مش مدعوم من ARCore</string>
+    <string name="session_error_permission">لازم صلاحية الكاميرا</string>
+    <string name="session_error_camera">الكاميرا مشغولة بتطبيق تاني</string>
+    <string name="session_error_unknown">صار خطأ بـ ARCore، شوف الـ logcat</string>
+
+    <!-- Calibration -->
+    <string name="calib_ipd">بين العدستين</string>
+    <string name="calib_k1">تشويه k1</string>
+    <string name="calib_k2">تشويه k2</string>
+    <string name="calib_screen_to_lens">الشاشة للعدسة</string>
+    <string name="calib_tray_to_lens">ارتفاع العدسة</string>
+    <string name="calib_fov">مجال الرؤية</string>
+    <string name="calib_shift">إزاحة الكاميرا</string>
+    <string name="calib_hint_in_viewer">أزرار الصوت ± · لمسة = التالي</string>
+    <string name="calib_show_camera">الكاميرا</string>
+    <string name="calib_show_grid">الشبكة</string>
+    <string name="calib_flip">اقلب الاتجاه</string>
+    <string name="calib_reset">الافتراضي</string>
+    <string name="calib_hide_panel">إخفاء</string>
+    <string name="calib_show_panel">إظهار اللوحة</string>
 </resources>

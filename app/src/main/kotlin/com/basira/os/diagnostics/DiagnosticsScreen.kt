@@ -50,6 +50,8 @@ fun DiagnosticsScreen(
     onInstallArCore: () -> Unit,
     onRecheckArCore: () -> Unit,
     onCopyReport: () -> Unit,
+    onStartPassthrough: () -> Unit,
+    onOpenCalibration: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -58,7 +60,12 @@ fun DiagnosticsScreen(
             .background(BasiraColors.Night)
             .padding(horizontal = 32.dp, vertical = 20.dp),
     ) {
-        Header(state = state, onCopyReport = onCopyReport)
+        Header(
+            state = state,
+            onCopyReport = onCopyReport,
+            onStartPassthrough = onStartPassthrough,
+            onOpenCalibration = onOpenCalibration,
+        )
         Spacer(Modifier.height(16.dp))
         Row(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -88,7 +95,12 @@ fun DiagnosticsScreen(
 }
 
 @Composable
-private fun Header(state: DiagnosticsUiState, onCopyReport: () -> Unit) {
+private fun Header(
+    state: DiagnosticsUiState,
+    onCopyReport: () -> Unit,
+    onStartPassthrough: () -> Unit,
+    onOpenCalibration: () -> Unit,
+) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Box(
             contentAlignment = Alignment.Center,
@@ -108,7 +120,14 @@ private fun Header(state: DiagnosticsUiState, onCopyReport: () -> Unit) {
             dotColor = qualityColor(state.quality),
         )
         Spacer(Modifier.width(12.dp))
-        PillButton(text = stringResource(R.string.diag_copy_report), onClick = onCopyReport)
+        TextButton(onClick = onCopyReport) {
+            Text(stringResource(R.string.diag_copy_report), color = BasiraColors.Mint)
+        }
+        TextButton(onClick = onOpenCalibration) {
+            Text(stringResource(R.string.diag_open_calibration), color = BasiraColors.Mint)
+        }
+        Spacer(Modifier.width(8.dp))
+        PillButton(text = stringResource(R.string.diag_start_passthrough), onClick = onStartPassthrough)
     }
 }
 
@@ -339,6 +358,8 @@ private fun DiagnosticsScreenPreview() {
             onInstallArCore = {},
             onRecheckArCore = {},
             onCopyReport = {},
+            onStartPassthrough = {},
+            onOpenCalibration = {},
         )
     }
 }
