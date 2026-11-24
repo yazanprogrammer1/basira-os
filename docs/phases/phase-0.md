@@ -54,8 +54,16 @@
 | ARCore مدعوم ومثبّت | ✅ `SUPPORTED_INSTALLED` |
 | الحرارة وقت الراحة | `NONE`، headroom 0.22 |
 | صلاحية الكاميرا وHilt | ✅، و13 binding (3 حقيقيين و10 stubs) |
-| hello_ar_kotlin: fps | |
-| hello_ar_kotlin: الحرارة بعد 10 دقايق (`dumpsys thermalservice`) | |
-| عينة MediaPipe Hand Landmarker: fps | |
+| عتبات خنق الجلد (من `dumpsys thermalservice`) | LIGHT 50°، MODERATE 52°، SEVERE 55°، CRITICAL 60° |
+| الحرارة وقت الراحة | جلد 30.1°، بطارية 26°، CPU حوالي 32°، GPU 30.5° (على USB من اللابتوب) |
+| MediaPipe HandLandmarker (GPU delegate، كاميرا أمامية، عبر تطبيق Kaff) | **11–12 fps** ثابت مع إيد ظاهرة |
+| الحرارة بعد حوالي 1.5 دقيقة MediaPipe | جلد 33.8°، GPU 44°، CPU 44–47° |
+| تجربة ARCore لعشر دقايق | **انتقلت للمرحلة 1:** عينات Google تقيلة على النت، وScene Viewer ممنوع من adb على OPPO. أول بناء passthrough مع الـ CSV logger هو نفسه هالتجربة |
+
+### استنتاجات للمراحل الجاية
+
+- **12fps لـ MediaPipe لحاله أقل من الـ 20 تبع NORMAL بالخطة.** بالمرحلة 3 منقارن CPU مع GPU، ومنصغّر الصورة اللي بتدخل، ومنعدّل تأكيد القرصة (3 فريمات بـ 12fps يعني حوالي 250ms تأخير)، ومنحدّث جدول الميزانية حسب الأرقام الحقيقية.
+- **OPPO عندها `Thermal.FpsControl`** (بيبيّن بالـ logcat)، والنظام بيحدّد fps لكل تطبيق حسب الحرارة. بالمرحلة 1 منراقبه بالـ logcat جنب الـ thermal status العادي.
+- **الجهاز متوسط (SM6450، بدون sustained performance).** الـ `renderScale` الافتراضي للعينين 0.85 بدل 1.0.
 | الصندوق: المسافة بين العدستين / من الشاشة للعدسة (mm) | |
 | الكاميرا مكشوفة بالصندوق؟ | |
