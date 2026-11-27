@@ -103,7 +103,7 @@ internal class StereoRenderer(
         if (scale != appliedScale) rebuildEyeBuffers(geometry, scale)
 
         val frame = frameSource.update()
-        if (frame != null && frame.hasIntrinsics &&
+        if (frame != null && frame.hasIntrinsics && frame.geometryVersion > 0 &&
             (frame.geometryVersion != cameraGeometryVersion || layoutVersion != cameraLayoutVersion)
         ) {
             updateCameraQuads(frame, geometry, profile)

@@ -43,6 +43,9 @@ class ArCoreCameraFrameSource @Inject constructor(
     @Volatile private var displayRotation = Surface.ROTATION_90
     private var appliedRotation = -1
 
+    /** False until the NDC -> texture transform has been computed for the current session and rotation. */
+    private var uvValid = false
+
     override fun onGlSurfaceCreated(cameraTextureId: Int) {
         this.cameraTextureId = cameraTextureId
         attachedSession = null // texture names belong to the new context
@@ -60,6 +63,7 @@ class ArCoreCameraFrameSource @Inject constructor(
             session.setCameraTextureName(cameraTextureId)
             attachedSession = session
             appliedRotation = -1
+            uvValid = false
             frame.clearIntrinsics()
         }
         val rotation = displayRotation
@@ -67,6 +71,7 @@ class ArCoreCameraFrameSource @Inject constructor(
             val size = session.cameraConfig.textureSize
             session.setDisplayGeometry(rotation, max(size.width, size.height), min(size.width, size.height))
             appliedRotation = rotation
+            uvValid = false
         }
 
         val arFrame = try {
@@ -81,7 +86,9 @@ class ArCoreCameraFrameSource @Inject constructor(
         val camera = arFrame.camera
         frame.set(timestampNs = timestamp, isTracking = camera.trackingState == TrackingState.TRACKING)
 
-        if (arFrame.hasDisplayGeometryChanged()) {
+        // hasDisplayGeometryChanged() fires on one frame only, which may come before the first frame we
+        // use; computing on our own first frame as well avoids drawing with all-zero coordinates.
+        if (arFrame.hasDisplayGeometryChanged() || !uvValid) {
             arFrame.transformCoordinates2d(
                 Coordinates2d.OPENGL_NORMALIZED_DEVICE_COORDINATES,
                 NDC_CORNERS,
@@ -89,6 +96,7 @@ class ArCoreCameraFrameSource @Inject constructor(
                 frame.uv,
             )
             frame.markUvChanged()
+            uvValid = true
         }
         if (!frame.hasIntrinsics) {
             val intrinsics = camera.textureIntrinsics
