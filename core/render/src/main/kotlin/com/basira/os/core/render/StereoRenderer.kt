@@ -14,9 +14,9 @@ import com.basira.os.core.render.gl.EyeFramebuffer
 import com.basira.os.core.render.gl.GlUtil
 import com.basira.os.core.render.layout.EyeGeometry
 import com.basira.os.core.render.layout.EyeLayout
-import com.basira.os.core.render.layout.Projection
 import com.basira.os.core.render.layout.ScreenSpec
-import com.basira.os.core.render.pass.CameraPass
+import com.basira.os.core.render.pass.DirectCameraMath
+import com.basira.os.core.render.pass.DirectCameraPass
 import com.basira.os.core.render.pass.DistortionPass
 import com.basira.os.core.render.pass.TestPatternPass
 import com.basira.os.core.render.stats.FrameStatsTracker
@@ -27,10 +27,11 @@ import kotlin.math.roundToInt
 /**
  * The GL thread. Per frame:
  * 1. pull the latest camera frame (non-blocking),
- * 2. draw each eye into its own buffer (camera quad or test pattern),
- * 3. draw both buffers to the screen through the lens distortion mesh,
- * 4. record frame timing.
- * Rebuilds layout, meshes and buffers only when the profile, density or quality level changes.
+ * 2. passthrough: draw each eye straight to the screen through its distortion mesh, sampling the
+ *    full-resolution camera texture with the reprojection rotation applied per pixel;
+ *    test pattern: draw the pattern into each eye buffer, then through the distortion mesh,
+ * 3. record frame timing.
+ * Layout, meshes and eye buffers are rebuilt only when the profile, density or quality level changes.
  */
 internal class StereoRenderer(
     private val compositor: StereoCompositor,
@@ -38,9 +39,9 @@ internal class StereoRenderer(
     private val logger: Logger,
 ) : GLSurfaceView.Renderer {
 
-    private lateinit var cameraPass: CameraPass
     private lateinit var patternPass: TestPatternPass
     private lateinit var distortionPass: DistortionPass
+    private lateinit var directCameraPass: DirectCameraPass
     private var oesTexture = 0
 
     private var surfaceWidth = 0
@@ -52,14 +53,10 @@ internal class StereoRenderer(
     private var appliedXdpi = 0f
     private var appliedYdpi = 0f
     private var appliedScale = 0f
-    private var layoutVersion = 0
-    private var cameraLayoutVersion = -1
-    private var cameraGeometryVersion = -1
-    private var cameraHalfTanX = 0f
+    private var loggedHalfTanX = 0f
 
-    private val projections = Array(2) { FloatArray(16) }
-    private val rotation = FloatArray(16)
-    private val mvp = FloatArray(16)
+    private val rotation4 = FloatArray(16)
+    private val captureFromNow3 = FloatArray(9)
     private val identity = floatArrayOf(0f, 0f, 0f, 1f)
 
     private val stats = FrameStatsTracker()
@@ -69,15 +66,13 @@ internal class StereoRenderer(
         // New EGL context: every GL object from before is gone.
         oesTexture = GlUtil.createOesTexture()
         frameSource.onGlSurfaceCreated(oesTexture)
-        cameraPass = CameraPass()
         patternPass = TestPatternPass()
         distortionPass = DistortionPass()
+        directCameraPass = DirectCameraPass(distortionPass)
         eyeBuffers.fill(null)
         eyes = null
         appliedProfile = null
         appliedScale = 0f
-        cameraLayoutVersion = -1
-        cameraGeometryVersion = -1
         stats.reset()
         GlUtil.checkError("onSurfaceCreated")
         logger.d(TAG, "GL surface created: ${GLES30.glGetString(GLES30.GL_RENDERER)}")
@@ -99,46 +94,78 @@ internal class StereoRenderer(
             rebuildLayout(profile)
         }
         val geometry = eyes ?: return
-        val scale = compositor.qualityLevel.eyeRenderScale
-        if (scale != appliedScale) rebuildEyeBuffers(geometry, scale)
-
         val frame = frameSource.update()
-        if (frame != null && frame.hasIntrinsics && frame.geometryVersion > 0 &&
-            (frame.geometryVersion != cameraGeometryVersion || layoutVersion != cameraLayoutVersion)
-        ) {
-            updateCameraQuads(frame, geometry, profile)
+
+        val reprojectionDegrees = when (compositor.renderMode) {
+            RenderMode.PASSTHROUGH -> drawPassthrough(frame, geometry, profile)
+            RenderMode.TEST_PATTERN -> {
+                drawTestPattern(geometry)
+                -1f
+            }
+        }
+        recordFrame(frame, reprojectionDegrees)
+    }
+
+    /** Returns the reprojection angle applied this frame, or -1 when none was. */
+    private fun drawPassthrough(frame: CameraFrame?, geometry: Array<EyeGeometry>, profile: ViewerProfile): Float {
+        bindScreen()
+        if (frame == null || !frame.hasIntrinsics || frame.geometryVersion <= 0) return -1f
+
+        val reprojecting = frame.reprojectionValid && compositor.reprojectionEnabled
+        QuatMath.toMatrix4(if (reprojecting) frame.reprojection else identity, rotation4)
+        DirectCameraMath.inverseRotation3(rotation4, captureFromNow3)
+
+        val scale = profile.passthroughScale
+        val halfTanX = frame.halfTanX * scale
+        val halfTanY = frame.halfTanY * scale
+        if (frame.halfTanX != loggedHalfTanX) {
+            loggedHalfTanX = frame.halfTanX
+            logger.d(TAG, "Camera ${frame.imageWidth}x${frame.imageHeight}, half-tan ${frame.halfTanX} x ${frame.halfTanY}")
         }
 
-        val reprojecting = frame != null && frame.reprojectionValid && compositor.reprojectionEnabled
-        QuatMath.toMatrix4(if (reprojecting) frame.reprojection else identity, rotation)
+        for (eye in 0..1) {
+            val g = geometry[eye]
+            GLES30.glViewport(g.viewportX, g.viewportY, g.viewportWidth, g.viewportHeight)
+            // passthroughShiftPx is in full-resolution eye pixels; convert to this eye's tan units.
+            val shiftTan = profile.passthroughShiftPx * g.eyeFov.width / g.viewportWidth
+            directCameraPass.draw(
+                eye = eye,
+                oesTexture = oesTexture,
+                fov = g.eyeFov,
+                captureFromNow3 = captureFromNow3,
+                halfTanX = halfTanX,
+                halfTanY = halfTanY,
+                shiftTan = if (eye == 0) shiftTan else -shiftTan,
+                cornerUv = frame.uv,
+            )
+        }
+        return if (reprojecting) frame.reprojectionDegrees else -1f
+    }
 
-        val mode = compositor.renderMode
+    private fun drawTestPattern(geometry: Array<EyeGeometry>) {
+        val scale = compositor.qualityLevel.eyeRenderScale
+        if (scale != appliedScale) rebuildEyeBuffers(geometry, scale)
         for (eye in 0..1) {
             val buffer = eyeBuffers[eye] ?: continue
             buffer.bind()
             GLES30.glClearColor(NIGHT_R, NIGHT_G, NIGHT_B, 1f)
             GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
-            when (mode) {
-                RenderMode.TEST_PATTERN -> patternPass.draw(eye)
-                RenderMode.PASSTHROUGH -> if (frame != null && cameraGeometryVersion >= 0) {
-                    Projection.multiply(projections[eye], rotation, mvp)
-                    cameraPass.draw(eye, oesTexture, mvp)
-                }
-            }
+            patternPass.draw(eye)
         }
-
-        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
-        GLES30.glViewport(0, 0, surfaceWidth, surfaceHeight)
-        GLES30.glClearColor(0f, 0f, 0f, 1f)
-        GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
+        bindScreen()
         for (eye in 0..1) {
             val buffer = eyeBuffers[eye] ?: continue
             val g = geometry[eye]
             GLES30.glViewport(g.viewportX, g.viewportY, g.viewportWidth, g.viewportHeight)
             distortionPass.draw(eye, buffer.texture)
         }
+    }
 
-        recordFrame(frame, if (reprojecting) frame.reprojectionDegrees else -1f)
+    private fun bindScreen() {
+        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
+        GLES30.glViewport(0, 0, surfaceWidth, surfaceHeight)
+        GLES30.glClearColor(0f, 0f, 0f, 1f)
+        GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
     }
 
     private fun rebuildLayout(profile: ViewerProfile) {
@@ -149,14 +176,12 @@ internal class StereoRenderer(
         for (eye in 0..1) {
             distortionPass.upload(eye, DistortionMeshBuilder.build(geometry[eye], model))
             patternPass.update(eye, geometry[eye].eyeFov)
-            Projection.fromTanBounds(geometry[eye].eyeFov, projections[eye])
         }
         eyes = geometry
         appliedProfile = profile
         appliedXdpi = compositor.xdpi
         appliedYdpi = compositor.ydpi
         appliedScale = 0f // eye buffer size depends on the viewport
-        layoutVersion++
         logger.d(TAG, "Layout rebuilt: left fov=${left.eyeFov}, lens=(${left.lensCenterXPx}, ${left.lensCenterYPx})")
     }
 
@@ -170,24 +195,7 @@ internal class StereoRenderer(
             )
         }
         appliedScale = scale
-        cameraLayoutVersion = -1 // shift is in eye-buffer pixels
         logger.d(TAG, "Eye buffers ${eyeBuffers[0]?.width}x${eyeBuffers[0]?.height} (scale $scale)")
-    }
-
-    private fun updateCameraQuads(frame: CameraFrame, geometry: Array<EyeGeometry>, profile: ViewerProfile) {
-        val bufferWidth = eyeBuffers[0]?.width ?: return
-        val shiftNdc = 2f * profile.passthroughShiftPx * appliedScale / bufferWidth
-        for (eye in 0..1) {
-            val inwardNdc = if (eye == 0) shiftNdc else -shiftNdc
-            val inwardTan = inwardNdc * geometry[eye].eyeFov.width / 2f
-            cameraPass.update(eye, frame.halfTanX, frame.halfTanY, inwardTan, frame.uv)
-        }
-        cameraGeometryVersion = frame.geometryVersion
-        cameraLayoutVersion = layoutVersion
-        if (frame.halfTanX != cameraHalfTanX) {
-            cameraHalfTanX = frame.halfTanX
-            logger.d(TAG, "Camera ${frame.imageWidth}x${frame.imageHeight}, half-tan ${frame.halfTanX} x ${frame.halfTanY}")
-        }
     }
 
     private fun recordFrame(frame: CameraFrame?, reprojectionDegrees: Float) {

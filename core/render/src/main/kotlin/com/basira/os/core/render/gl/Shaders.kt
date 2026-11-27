@@ -18,29 +18,46 @@ void main() {
 """
 
     /**
-     * Camera quad as view-space directions (z = -1 at capture time), rotated by the head motion since
-     * capture and projected per eye. Clip-space w gives perspective-correct texture coordinates.
+     * Direct passthrough: the distortion mesh gives each screen pixel its eye tan-angle; we rotate it back
+     * to where the camera was looking at capture time and sample the camera texture there. One fetch from
+     * the full-resolution camera image per pixel, no intermediate eye buffer.
+     * Mirrors DirectCameraMath.
      */
-    const val CAMERA_VERTEX = """#version 300 es
-layout(location = 0) in vec3 aDirection;
-layout(location = 1) in vec2 aCoord;
-uniform mat4 uMvp;
-out vec2 vCoord;
-void main() {
-    vCoord = aCoord;
-    gl_Position = uMvp * vec4(aDirection, 1.0);
-}
-"""
-
-    /** Camera image from ARCore (external OES texture). */
-    const val CAMERA_OES_FRAGMENT = """#version 300 es
+    const val DIRECT_CAMERA_FRAGMENT = """#version 300 es
 #extension GL_OES_EGL_image_external_essl3 : require
-precision mediump float;
+precision highp float;
 uniform samplerExternalOES uCamera;
+uniform vec2 uFovMin;
+uniform vec2 uFovSize;
+uniform mat3 uCaptureFromNow;
+uniform vec2 uHalfTan;
+uniform float uShift;
+uniform vec2 uUv00;
+uniform vec2 uUvX;
+uniform vec2 uUvY;
 in vec2 vCoord;
 out vec4 fragColor;
+const vec3 NIGHT = vec3(0.043, 0.059, 0.051);
 void main() {
-    fragColor = vec4(texture(uCamera, vCoord).rgb, 1.0);
+    if (vCoord.x < 0.0 || vCoord.x > 1.0 || vCoord.y < 0.0 || vCoord.y > 1.0) {
+        fragColor = vec4(0.0, 0.0, 0.0, 1.0);
+        return;
+    }
+    vec2 tanNow = uFovMin + vCoord * uFovSize;
+    vec3 d = uCaptureFromNow * vec3(tanNow, -1.0);
+    if (d.z > -1e-4) {
+        fragColor = vec4(NIGHT, 1.0);
+        return;
+    }
+    vec2 t = d.xy / -d.z;
+    t.x -= uShift;
+    vec2 q = t / uHalfTan * 0.5 + 0.5;
+    if (q.x < 0.0 || q.x > 1.0 || q.y < 0.0 || q.y > 1.0) {
+        fragColor = vec4(NIGHT, 1.0);
+        return;
+    }
+    vec2 uv = uUv00 + q.x * uUvX + q.y * uUvY;
+    fragColor = vec4(texture(uCamera, uv).rgb, 1.0);
 }
 """
 
