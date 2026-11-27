@@ -15,6 +15,7 @@ import com.basira.os.core.tracking.arcore.ArSessionState
 import com.basira.os.perf.PerfRecorder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -28,6 +29,8 @@ data class OverlayState(
     val thermal: ThermalSnapshot? = null,
     val quality: QualityLevel = QualityLevel.NORMAL,
     val session: ArSessionState = ArSessionState.Idle,
+    val reprojectionEnabled: Boolean = true,
+    val visible: Boolean = true,
 )
 
 @HiltViewModel
@@ -40,13 +43,29 @@ class PassthroughViewModel @Inject constructor(
     private val perfRecorder: PerfRecorder,
 ) : ViewModel() {
 
+    private val reprojection = MutableStateFlow(compositor.reprojectionEnabled)
+    private val overlayVisible = MutableStateFlow(true)
+
     val overlay: StateFlow<OverlayState> = combine(
         compositor.frameStats,
         thermalSource.snapshots.onStart<ThermalSnapshot?> { emit(null) },
         governor.qualityLevel,
         sessions.state,
-    ) { stats, thermal, quality, session -> OverlayState(stats, thermal, quality, session) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), OverlayState())
+        combine(reprojection, overlayVisible, ::Pair),
+    ) { stats, thermal, quality, session, (reproj, visible) ->
+        OverlayState(stats, thermal, quality, session, reproj, visible)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), OverlayState())
+
+    /** Volume up inside the viewer: A/B the camera reprojection. */
+    fun toggleReprojection() {
+        reprojection.value = !reprojection.value
+        compositor.setReprojectionEnabled(reprojection.value)
+    }
+
+    /** Volume down or a tap: hide/show the developer overlay. */
+    fun toggleOverlay() {
+        overlayVisible.value = !overlayVisible.value
+    }
 
     /** Runs while the passthrough screen is on screen: thermal budget -> renderer, plus the perf CSV. */
     suspend fun runWhileVisible() = coroutineScope {

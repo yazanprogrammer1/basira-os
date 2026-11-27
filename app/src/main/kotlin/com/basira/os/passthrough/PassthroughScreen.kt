@@ -13,10 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -35,12 +32,14 @@ import com.basira.os.ui.system.theme.BasiraColors
 import com.basira.os.ui.system.theme.BasiraShapes
 import java.util.Locale
 
-/** Stereo passthrough. A tap (or the viewer button) toggles the developer overlay. */
+/**
+ * Stereo passthrough. A tap (or the viewer button) or volume down toggles the developer overlay;
+ * volume up toggles camera reprojection for side-by-side comparison in the viewer.
+ */
 @Composable
 fun PassthroughScreen(viewModel: PassthroughViewModel) {
     LaunchedEffect(Unit) { viewModel.runWhileVisible() }
     val overlay by viewModel.overlay.collectAsStateWithLifecycle()
-    var showOverlay by rememberSaveable { mutableStateOf(true) }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         StereoSurface(
@@ -52,14 +51,16 @@ fun PassthroughScreen(viewModel: PassthroughViewModel) {
         Box(
             Modifier
                 .fillMaxSize()
-                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
-                    showOverlay = !showOverlay
-                },
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = viewModel::toggleOverlay,
+                ),
         )
         val failure = overlay.session as? ArSessionState.Failed
         if (failure != null) {
             PerEyeOverlay { EyeLabel(stringResource(sessionErrorText(failure.error)), BasiraColors.Live) }
-        } else if (showOverlay) {
+        } else if (overlay.visible) {
             PerEyeOverlay(alignment = Alignment.Center) {
                 DevStats(overlay, Modifier.offset(y = (-110).dp))
             }
@@ -81,7 +82,12 @@ private fun DevStats(state: OverlayState, modifier: Modifier = Modifier) {
     val camera = if (s.cameraAgeMs >= 0f) String.format(Locale.US, "cam %.0f ms", s.cameraAgeMs) else "cam --"
     val battery = t?.batteryTempC?.let { String.format(Locale.US, "%.1f°", it) } ?: "--°"
     val headroom = t?.headroom?.let { String.format(Locale.US, "h %.2f", it) } ?: "h --"
-    val line2 = "$camera · ${if (s.tracking) "6DoF" else "no track"} · $battery · $headroom · ${state.quality}"
+    val reprojection = when {
+        !state.reprojectionEnabled -> "reproj OFF"
+        s.reprojectionDegrees < 0f -> "reproj n/a"
+        else -> String.format(Locale.US, "reproj %.1f°", s.reprojectionDegrees)
+    }
+    val line2 = "$camera · $reprojection · ${if (s.tracking) "6DoF" else "no track"} · $battery · $headroom · ${state.quality}"
     val color = when (state.quality) {
         QualityLevel.NORMAL -> BasiraColors.Mint
         QualityLevel.WARM -> BasiraColors.Warning

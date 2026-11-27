@@ -130,6 +130,16 @@ class MainActivity : ComponentActivity() {
 
     /** In calibration the volume keys tune the selected value (they still work inside the viewer). */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (screen == AppScreen.PASSTHROUGH && event.keyCode in VOLUME_KEYS) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                if (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+                    passthroughViewModel.toggleReprojection()
+                } else {
+                    passthroughViewModel.toggleOverlay()
+                }
+            }
+            return true
+        }
         if (screen == AppScreen.CALIBRATION) {
             val steps = when (event.keyCode) {
                 KeyEvent.KEYCODE_VOLUME_UP -> 1
@@ -206,5 +216,6 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val TARGET_REFRESH_HZ = 60f
+        val VOLUME_KEYS = setOf(KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_VOLUME_DOWN)
     }
 }
