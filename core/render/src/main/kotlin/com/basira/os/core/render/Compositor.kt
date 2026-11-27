@@ -16,6 +16,8 @@ data class FrameStats(
     /** Age of the camera image when it was drawn; -1 when unknown. Approximate motion-to-photon floor. */
     val cameraAgeMs: Float = -1f,
     val tracking: Boolean = false,
+    /** Head rotation applied to the camera image this frame; -1 when reprojection is off or unavailable. */
+    val reprojectionDegrees: Float = -1f,
 ) {
     val jankRatio: Float get() = if (totalFrames == 0L) 0f else jankyFrames.toFloat() / totalFrames
 }
@@ -36,10 +38,14 @@ enum class RenderMode {
 interface Compositor {
     val frameStats: StateFlow<FrameStats>
     val qualityLevel: QualityLevel
+    val reprojectionEnabled: Boolean
 
     fun setQualityLevel(level: QualityLevel)
 
     fun setRenderMode(mode: RenderMode)
+
+    /** Camera reprojection with the orientation sensor; on by default, togglable for A/B tests. */
+    fun setReprojectionEnabled(enabled: Boolean)
 
     /** Live preview while calibrating; null goes back to the stored profile. */
     fun setViewerProfilePreview(profile: ViewerProfile?)

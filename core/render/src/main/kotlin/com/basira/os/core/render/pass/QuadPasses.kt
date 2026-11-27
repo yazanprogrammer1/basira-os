@@ -71,25 +71,69 @@ internal abstract class EyeQuadPass(fragmentSource: String) {
 }
 
 /**
- * The camera image as a head-locked quad at its true angular size inside the eye's field of view.
- * Mono passthrough: both eyes get the same image, with an optional inward shift.
+ * The camera image as a quad of view-space directions at its true angular size (z = -1).
+ * Mono passthrough: both eyes get the same image, with an optional inward shift (in tan units).
+ * The per-eye MVP = projection(eye fov) * reprojection rotation, set every frame.
  */
-internal class CameraPass : EyeQuadPass(Shaders.CAMERA_OES_FRAGMENT) {
+internal class CameraPass {
+    private val program = GlUtil.compileProgram(Shaders.CAMERA_VERTEX, Shaders.CAMERA_OES_FRAGMENT)
     private val samplerLocation = GLES30.glGetUniformLocation(program, "uCamera")
+    private val mvpLocation = GLES30.glGetUniformLocation(program, "uMvp")
+    private val vaos = IntArray(EYES) { GlUtil.genVertexArray() }
+    private val vbos = IntArray(EYES) { GlUtil.genBuffer() }
+    private val values = FloatArray(QUAD_VERTICES * CAMERA_FLOATS)
+    private val scratch = GlUtil.floatBuffer(values.size)
+    private val ready = BooleanArray(EYES)
 
-    fun update(eye: Int, fov: TanBounds, halfTanX: Float, halfTanY: Float, shiftNdc: Float, uv: FloatArray) {
-        fun ndcX(tan: Float) = (tan - fov.left) / fov.width * 2f - 1f + shiftNdc
-        fun ndcY(tan: Float) = (tan - fov.bottom) / fov.height * 2f - 1f
-        upload(eye, ndcX(-halfTanX), ndcX(halfTanX), ndcY(-halfTanY), ndcY(halfTanY), uv)
+    init {
+        for (eye in 0 until EYES) {
+            GLES30.glBindVertexArray(vaos[eye])
+            GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, vbos[eye])
+            GLES30.glBufferData(GLES30.GL_ARRAY_BUFFER, values.size * Float.SIZE_BYTES, null, GLES30.GL_DYNAMIC_DRAW)
+            val stride = CAMERA_FLOATS * Float.SIZE_BYTES
+            GLES30.glEnableVertexAttribArray(0)
+            GLES30.glVertexAttribPointer(0, 3, GLES30.GL_FLOAT, false, stride, 0)
+            GLES30.glEnableVertexAttribArray(1)
+            GLES30.glVertexAttribPointer(1, 2, GLES30.GL_FLOAT, false, stride, 3 * Float.SIZE_BYTES)
+        }
+        GLES30.glBindVertexArray(0)
     }
 
-    fun draw(eye: Int, oesTexture: Int) {
-        if (!isReady(eye)) return
+    /** [uv]: texture coordinates in strip order (bottom-left, bottom-right, top-left, top-right). */
+    fun update(eye: Int, halfTanX: Float, halfTanY: Float, shiftTan: Float, uv: FloatArray) {
+        val xs = floatArrayOf(-halfTanX, halfTanX, -halfTanX, halfTanX)
+        val ys = floatArrayOf(-halfTanY, -halfTanY, halfTanY, halfTanY)
+        for (v in 0 until QUAD_VERTICES) {
+            val o = v * CAMERA_FLOATS
+            values[o] = xs[v] + shiftTan
+            values[o + 1] = ys[v]
+            values[o + 2] = -1f
+            values[o + 3] = uv[v * 2]
+            values[o + 4] = uv[v * 2 + 1]
+        }
+        scratch.position(0)
+        scratch.put(values)
+        scratch.position(0)
+        GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, vbos[eye])
+        GLES30.glBufferSubData(GLES30.GL_ARRAY_BUFFER, 0, values.size * Float.SIZE_BYTES, scratch)
+        ready[eye] = true
+    }
+
+    fun draw(eye: Int, oesTexture: Int, mvp: FloatArray) {
+        if (!ready[eye]) return
         GLES30.glUseProgram(program)
+        GLES30.glUniformMatrix4fv(mvpLocation, 1, false, mvp, 0)
         GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
         GLES30.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, oesTexture)
         GLES30.glUniform1i(samplerLocation, 0)
-        drawQuad(eye)
+        GLES30.glBindVertexArray(vaos[eye])
+        GLES30.glDrawArrays(GLES30.GL_TRIANGLE_STRIP, 0, QUAD_VERTICES)
+        GLES30.glBindVertexArray(0)
+    }
+
+    private companion object {
+        /** direction (3) + uv (2) */
+        const val CAMERA_FLOATS = 5
     }
 }
 

@@ -19,8 +19,9 @@ class FrameStatsTracker(
     private var jankyFrames = 0L
     private var cameraAgeMs = -1f
     private var tracking = false
+    private var reprojectionDegrees = -1f
 
-    fun onFrame(nowNs: Long, cameraAgeMs: Float, tracking: Boolean) {
+    fun onFrame(nowNs: Long, cameraAgeMs: Float, tracking: Boolean, reprojectionDegrees: Float = -1f) {
         if (lastFrameNs != NO_FRAME) {
             val interval = (nowNs - lastFrameNs) / 1_000_000f
             intervalsMs[next] = interval
@@ -32,6 +33,7 @@ class FrameStatsTracker(
         lastFrameNs = nowNs
         if (cameraAgeMs >= 0f) this.cameraAgeMs = cameraAgeMs
         this.tracking = tracking
+        this.reprojectionDegrees = reprojectionDegrees
     }
 
     /** Call when rendering pauses so the gap is not counted as a slow frame. */
@@ -42,7 +44,7 @@ class FrameStatsTracker(
     }
 
     fun snapshot(): FrameStats {
-        if (count == 0) return FrameStats(totalFrames = totalFrames, jankyFrames = jankyFrames, cameraAgeMs = cameraAgeMs, tracking = tracking)
+        if (count == 0) return FrameStats(totalFrames = totalFrames, jankyFrames = jankyFrames, cameraAgeMs = cameraAgeMs, tracking = tracking, reprojectionDegrees = reprojectionDegrees)
         val window = intervalsMs.copyOf(count)
         val sum = window.sum()
         window.sort()
@@ -56,6 +58,7 @@ class FrameStatsTracker(
             totalFrames = totalFrames,
             cameraAgeMs = cameraAgeMs,
             tracking = tracking,
+            reprojectionDegrees = reprojectionDegrees,
         )
     }
 }

@@ -6,6 +6,7 @@ import android.os.SystemClock
 import com.basira.os.core.common.camera.CameraFrame
 import com.basira.os.core.common.camera.CameraFrameSource
 import com.basira.os.core.common.logging.Logger
+import com.basira.os.core.common.math.QuatMath
 import com.basira.os.core.common.viewer.ViewerProfile
 import com.basira.os.core.render.distortion.DistortionMeshBuilder
 import com.basira.os.core.render.distortion.DistortionModel
@@ -13,6 +14,7 @@ import com.basira.os.core.render.gl.EyeFramebuffer
 import com.basira.os.core.render.gl.GlUtil
 import com.basira.os.core.render.layout.EyeGeometry
 import com.basira.os.core.render.layout.EyeLayout
+import com.basira.os.core.render.layout.Projection
 import com.basira.os.core.render.layout.ScreenSpec
 import com.basira.os.core.render.pass.CameraPass
 import com.basira.os.core.render.pass.DistortionPass
@@ -54,6 +56,11 @@ internal class StereoRenderer(
     private var cameraLayoutVersion = -1
     private var cameraGeometryVersion = -1
     private var cameraHalfTanX = 0f
+
+    private val projections = Array(2) { FloatArray(16) }
+    private val rotation = FloatArray(16)
+    private val mvp = FloatArray(16)
+    private val identity = floatArrayOf(0f, 0f, 0f, 1f)
 
     private val stats = FrameStatsTracker()
     private var lastPublishNs = 0L
@@ -102,6 +109,9 @@ internal class StereoRenderer(
             updateCameraQuads(frame, geometry, profile)
         }
 
+        val reprojecting = frame != null && frame.reprojectionValid && compositor.reprojectionEnabled
+        QuatMath.toMatrix4(if (reprojecting) frame.reprojection else identity, rotation)
+
         val mode = compositor.renderMode
         for (eye in 0..1) {
             val buffer = eyeBuffers[eye] ?: continue
@@ -110,7 +120,10 @@ internal class StereoRenderer(
             GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
             when (mode) {
                 RenderMode.TEST_PATTERN -> patternPass.draw(eye)
-                RenderMode.PASSTHROUGH -> if (frame != null && cameraGeometryVersion >= 0) cameraPass.draw(eye, oesTexture)
+                RenderMode.PASSTHROUGH -> if (frame != null && cameraGeometryVersion >= 0) {
+                    Projection.multiply(projections[eye], rotation, mvp)
+                    cameraPass.draw(eye, oesTexture, mvp)
+                }
             }
         }
 
@@ -125,7 +138,7 @@ internal class StereoRenderer(
             distortionPass.draw(eye, buffer.texture)
         }
 
-        recordFrame(frame)
+        recordFrame(frame, if (reprojecting) frame.reprojectionDegrees else -1f)
     }
 
     private fun rebuildLayout(profile: ViewerProfile) {
@@ -136,6 +149,7 @@ internal class StereoRenderer(
         for (eye in 0..1) {
             distortionPass.upload(eye, DistortionMeshBuilder.build(geometry[eye], model))
             patternPass.update(eye, geometry[eye].eyeFov)
+            Projection.fromTanBounds(geometry[eye].eyeFov, projections[eye])
         }
         eyes = geometry
         appliedProfile = profile
@@ -164,8 +178,9 @@ internal class StereoRenderer(
         val bufferWidth = eyeBuffers[0]?.width ?: return
         val shiftNdc = 2f * profile.passthroughShiftPx * appliedScale / bufferWidth
         for (eye in 0..1) {
-            val inward = if (eye == 0) shiftNdc else -shiftNdc
-            cameraPass.update(eye, geometry[eye].eyeFov, frame.halfTanX, frame.halfTanY, inward, frame.uv)
+            val inwardNdc = if (eye == 0) shiftNdc else -shiftNdc
+            val inwardTan = inwardNdc * geometry[eye].eyeFov.width / 2f
+            cameraPass.update(eye, frame.halfTanX, frame.halfTanY, inwardTan, frame.uv)
         }
         cameraGeometryVersion = frame.geometryVersion
         cameraLayoutVersion = layoutVersion
@@ -175,14 +190,14 @@ internal class StereoRenderer(
         }
     }
 
-    private fun recordFrame(frame: CameraFrame?) {
+    private fun recordFrame(frame: CameraFrame?, reprojectionDegrees: Float) {
         val now = System.nanoTime()
         val cameraAgeMs = if (frame != null && frame.timestampNs > 0L) {
             ((SystemClock.elapsedRealtimeNanos() - frame.timestampNs) / 1_000_000f).takeIf { it in 0f..1000f } ?: -1f
         } else {
             -1f
         }
-        stats.onFrame(now, cameraAgeMs, frame?.isTracking == true)
+        stats.onFrame(now, cameraAgeMs, frame?.isTracking == true, reprojectionDegrees)
         if (now - lastPublishNs >= PUBLISH_INTERVAL_NS) {
             lastPublishNs = now
             compositor.publish(stats.snapshot())

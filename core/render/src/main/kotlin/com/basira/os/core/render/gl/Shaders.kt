@@ -17,6 +17,21 @@ void main() {
 }
 """
 
+    /**
+     * Camera quad as view-space directions (z = -1 at capture time), rotated by the head motion since
+     * capture and projected per eye. Clip-space w gives perspective-correct texture coordinates.
+     */
+    const val CAMERA_VERTEX = """#version 300 es
+layout(location = 0) in vec3 aDirection;
+layout(location = 1) in vec2 aCoord;
+uniform mat4 uMvp;
+out vec2 vCoord;
+void main() {
+    vCoord = aCoord;
+    gl_Position = uMvp * vec4(aDirection, 1.0);
+}
+"""
+
     /** Camera image from ARCore (external OES texture). */
     const val CAMERA_OES_FRAGMENT = """#version 300 es
 #extension GL_OES_EGL_image_external_essl3 : require

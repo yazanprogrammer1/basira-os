@@ -30,6 +30,9 @@ class StereoCompositor @Inject constructor(
     @Volatile override var qualityLevel: QualityLevel = QualityLevel.NORMAL
         private set
 
+    @Volatile override var reprojectionEnabled: Boolean = true
+        private set
+
     @Volatile internal var renderMode: RenderMode = RenderMode.PASSTHROUGH
         private set
 
@@ -56,6 +59,10 @@ class StereoCompositor @Inject constructor(
 
     override fun setRenderMode(mode: RenderMode) {
         renderMode = mode
+    }
+
+    override fun setReprojectionEnabled(enabled: Boolean) {
+        reprojectionEnabled = enabled
     }
 
     override fun setViewerProfilePreview(profile: ViewerProfile?) {
