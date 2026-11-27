@@ -48,6 +48,7 @@ class DataStoreCalibrationStore @Inject constructor(
             prefs[FOV] = profile.maxFovDeg
             prefs[SHIFT] = profile.passthroughShiftPx
             prefs[ORIENTATION] = profile.orientation.name
+            prefs[SCALE] = profile.passthroughScale
         }
     }
 
@@ -68,6 +69,7 @@ class DataStoreCalibrationStore @Inject constructor(
             orientation = prefs[ORIENTATION]
                 ?.let { name -> ScreenOrientation.entries.firstOrNull { it.name == name } }
                 ?: d.orientation,
+            passthroughScale = prefs[SCALE] ?: d.passthroughScale,
         ).sanitized()
     }
 
@@ -80,5 +82,6 @@ class DataStoreCalibrationStore @Inject constructor(
         val FOV = floatPreferencesKey("max_fov_deg")
         val SHIFT = floatPreferencesKey("passthrough_shift_px")
         val ORIENTATION = stringPreferencesKey("orientation")
+        val SCALE = floatPreferencesKey("passthrough_scale")
     }
 }

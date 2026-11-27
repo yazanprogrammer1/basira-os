@@ -19,6 +19,11 @@ data class ViewerProfile(
     /** Horizontal passthrough offset per eye, in eye-buffer pixels. Positive moves the images inward. */
     val passthroughShiftPx: Float,
     val orientation: ScreenOrientation,
+    /**
+     * Angular size of the passthrough relative to the camera's true field of view. 1.0 is physically
+     * correct for a perfectly calibrated viewer; the user tunes it until the room matches reality.
+     */
+    val passthroughScale: Float = 1f,
 ) {
     /** Clamps every value into [Limits], so a bad stored value can never break the view. */
     fun sanitized(): ViewerProfile = copy(
@@ -29,6 +34,7 @@ data class ViewerProfile(
         k2 = k2.coerceIn(Limits.DISTORTION),
         maxFovDeg = maxFovDeg.coerceIn(Limits.FOV_DEG),
         passthroughShiftPx = passthroughShiftPx.coerceIn(Limits.SHIFT_PX),
+        passthroughScale = passthroughScale.coerceIn(Limits.PASSTHROUGH_SCALE),
     )
 
     /** Physically plausible ranges for phone viewers. */
@@ -39,6 +45,7 @@ data class ViewerProfile(
         val DISTORTION = 0f..1f
         val FOV_DEG = 40f..70f
         val SHIFT_PX = -60f..60f
+        val PASSTHROUGH_SCALE = 0.8f..1.6f
     }
 
     companion object {

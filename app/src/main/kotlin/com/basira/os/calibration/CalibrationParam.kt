@@ -7,7 +7,8 @@ import java.util.Locale
 
 /**
  * One adjustable viewer parameter. Order = the order to calibrate in:
- * IPD until the two crosshairs fuse, then k1 until grid lines look straight, then k2 for the edges.
+ * IPD until the two crosshairs fuse, then k1 until grid lines look straight, then k2 for the edges,
+ * then the passthrough scale until a door seen through the viewer matches the door seen past it.
  */
 enum class CalibrationParam(
     @StringRes val label: Int,
@@ -19,6 +20,7 @@ enum class CalibrationParam(
     IPD(R.string.calib_ipd, "mm", 0.5f, ViewerProfile.Limits.INTER_LENS_MM, 1),
     K1(R.string.calib_k1, "", 0.01f, ViewerProfile.Limits.DISTORTION, 2),
     K2(R.string.calib_k2, "", 0.01f, ViewerProfile.Limits.DISTORTION, 2),
+    SCALE(R.string.calib_scale, "×", 0.02f, ViewerProfile.Limits.PASSTHROUGH_SCALE, 2),
     SCREEN_TO_LENS(R.string.calib_screen_to_lens, "mm", 0.5f, ViewerProfile.Limits.SCREEN_TO_LENS_MM, 1),
     TRAY_TO_LENS(R.string.calib_tray_to_lens, "mm", 0.5f, ViewerProfile.Limits.TRAY_TO_LENS_MM, 1),
     FOV(R.string.calib_fov, "°", 1f, ViewerProfile.Limits.FOV_DEG, 0),
@@ -36,6 +38,7 @@ enum class CalibrationParam(
         TRAY_TO_LENS -> p.trayToLensCenterMm
         FOV -> p.maxFovDeg
         SHIFT -> p.passthroughShiftPx
+        SCALE -> p.passthroughScale
     }
 
     fun set(p: ViewerProfile, value: Float): ViewerProfile {
@@ -48,6 +51,7 @@ enum class CalibrationParam(
             TRAY_TO_LENS -> p.copy(trayToLensCenterMm = v)
             FOV -> p.copy(maxFovDeg = v)
             SHIFT -> p.copy(passthroughShiftPx = v)
+            SCALE -> p.copy(passthroughScale = v)
         }
     }
 

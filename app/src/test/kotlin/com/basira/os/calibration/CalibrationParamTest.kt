@@ -47,6 +47,13 @@ class CalibrationParamTest {
     }
 
     @Test
+    fun `passthrough scale defaults to true size and is clamped`() {
+        assertEquals(1f, base.passthroughScale, 0f)
+        assertEquals(1.1f, CalibrationParam.SCALE.adjust(base, 5).passthroughScale, 1e-6f)
+        assertEquals(1.6f, CalibrationParam.SCALE.set(base, 3f).passthroughScale, 0f)
+    }
+
+    @Test
     fun `labels are formatted with units`() {
         assertEquals("64.0 mm", CalibrationParam.IPD.format(base))
         assertEquals("0.34", CalibrationParam.K1.format(base))
