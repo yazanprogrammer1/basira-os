@@ -13,18 +13,20 @@ enum class CalibrationParam(
     @StringRes val label: Int,
     val unit: String,
     val step: Float,
-    val min: Float,
-    val max: Float,
+    private val range: ClosedFloatingPointRange<Float>,
     val decimals: Int,
 ) {
-    IPD(R.string.calib_ipd, "mm", 0.5f, 50f, 80f, 1),
-    K1(R.string.calib_k1, "", 0.01f, 0f, 1.5f, 2),
-    K2(R.string.calib_k2, "", 0.01f, 0f, 1.5f, 2),
-    SCREEN_TO_LENS(R.string.calib_screen_to_lens, "mm", 0.5f, 25f, 60f, 1),
-    TRAY_TO_LENS(R.string.calib_tray_to_lens, "mm", 0.5f, 15f, 60f, 1),
-    FOV(R.string.calib_fov, "°", 1f, 30f, 80f, 0),
-    SHIFT(R.string.calib_shift, "px", 2f, -100f, 100f, 0),
+    IPD(R.string.calib_ipd, "mm", 0.5f, ViewerProfile.Limits.INTER_LENS_MM, 1),
+    K1(R.string.calib_k1, "", 0.01f, ViewerProfile.Limits.DISTORTION, 2),
+    K2(R.string.calib_k2, "", 0.01f, ViewerProfile.Limits.DISTORTION, 2),
+    SCREEN_TO_LENS(R.string.calib_screen_to_lens, "mm", 0.5f, ViewerProfile.Limits.SCREEN_TO_LENS_MM, 1),
+    TRAY_TO_LENS(R.string.calib_tray_to_lens, "mm", 0.5f, ViewerProfile.Limits.TRAY_TO_LENS_MM, 1),
+    FOV(R.string.calib_fov, "°", 1f, ViewerProfile.Limits.FOV_DEG, 0),
+    SHIFT(R.string.calib_shift, "px", 2f, ViewerProfile.Limits.SHIFT_PX, 0),
     ;
+
+    val min: Float get() = range.start
+    val max: Float get() = range.endInclusive
 
     fun get(p: ViewerProfile): Float = when (this) {
         IPD -> p.interLensDistanceMm

@@ -20,6 +20,27 @@ data class ViewerProfile(
     val passthroughShiftPx: Float,
     val orientation: ScreenOrientation,
 ) {
+    /** Clamps every value into [Limits], so a bad stored value can never break the view. */
+    fun sanitized(): ViewerProfile = copy(
+        interLensDistanceMm = interLensDistanceMm.coerceIn(Limits.INTER_LENS_MM),
+        screenToLensMm = screenToLensMm.coerceIn(Limits.SCREEN_TO_LENS_MM),
+        trayToLensCenterMm = trayToLensCenterMm.coerceIn(Limits.TRAY_TO_LENS_MM),
+        k1 = k1.coerceIn(Limits.DISTORTION),
+        k2 = k2.coerceIn(Limits.DISTORTION),
+        maxFovDeg = maxFovDeg.coerceIn(Limits.FOV_DEG),
+        passthroughShiftPx = passthroughShiftPx.coerceIn(Limits.SHIFT_PX),
+    )
+
+    /** Physically plausible ranges for phone viewers. */
+    object Limits {
+        val INTER_LENS_MM = 55f..75f
+        val SCREEN_TO_LENS_MM = 30f..55f
+        val TRAY_TO_LENS_MM = 15f..55f
+        val DISTORTION = 0f..1f
+        val FOV_DEG = 40f..70f
+        val SHIFT_PX = -60f..60f
+    }
+
     companion object {
         /** Google Cardboard v2 published values. A starting point only: every viewer differs. */
         val CARDBOARD_V2 = ViewerProfile(

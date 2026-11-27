@@ -23,8 +23,20 @@ class CalibrationParamTest {
 
     @Test
     fun `values are clamped to a sane range`() {
-        assertEquals(80f, CalibrationParam.IPD.set(base, 500f).interLensDistanceMm, 0f)
+        assertEquals(75f, CalibrationParam.IPD.set(base, 500f).interLensDistanceMm, 0f)
         assertEquals(0f, CalibrationParam.K1.set(base, -3f).k1, 0f)
+    }
+
+    @Test
+    fun `stored extreme values are pulled back into range`() {
+        val wild = base.copy(interLensDistanceMm = 78f, k1 = 1.29f, k2 = 0.91f, maxFovDeg = 80f, screenToLensMm = 54.5f)
+        val safe = wild.sanitized()
+        assertEquals(75f, safe.interLensDistanceMm, 0f)
+        assertEquals(1f, safe.k1, 0f)
+        assertEquals(0.91f, safe.k2, 0f)
+        assertEquals(70f, safe.maxFovDeg, 0f)
+        assertEquals(54.5f, safe.screenToLensMm, 0f)
+        assertEquals(base, base.sanitized())
     }
 
     @Test

@@ -68,7 +68,7 @@ class DataStoreCalibrationStore @Inject constructor(
             orientation = prefs[ORIENTATION]
                 ?.let { name -> ScreenOrientation.entries.firstOrNull { it.name == name } }
                 ?: d.orientation,
-        )
+        ).sanitized()
     }
 
     private companion object {
