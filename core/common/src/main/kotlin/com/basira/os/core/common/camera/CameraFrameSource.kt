@@ -36,6 +36,27 @@ class CameraFrame {
     var geometryVersion: Int = 0
         internal set
 
+    /**
+     * Head rotation from the moment this image was captured to the predicted display time,
+     * in the view frame (x right, y up, z towards the viewer), as (x, y, z, w).
+     * Drawing the camera quad rotated by it keeps the room still while the image is stale.
+     */
+    val reprojection: FloatArray = floatArrayOf(0f, 0f, 0f, 1f)
+
+    var reprojectionValid: Boolean = false
+        private set
+
+    var reprojectionDegrees: Float = 0f
+        private set
+
+    fun setReprojection(valid: Boolean, degrees: Float) {
+        reprojectionValid = valid
+        reprojectionDegrees = degrees
+        if (!valid) {
+            reprojection[0] = 0f; reprojection[1] = 0f; reprojection[2] = 0f; reprojection[3] = 1f
+        }
+    }
+
     val hasIntrinsics: Boolean get() = focalLengthX > 0f && focalLengthY > 0f && imageWidth > 0 && imageHeight > 0
 
     /** Half field of view as tan-angles, assuming the principal point is centred. */
