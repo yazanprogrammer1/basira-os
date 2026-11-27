@@ -2,6 +2,7 @@ package com.basira.os.core.tracking.arcore
 
 import android.content.Context
 import com.basira.os.core.common.logging.Logger
+import com.basira.os.core.tracking.orientation.OrientationTracker
 import com.google.ar.core.CameraConfig
 import com.google.ar.core.CameraConfigFilter
 import com.google.ar.core.Config
@@ -36,6 +37,7 @@ sealed interface ArSessionState {
 @Singleton
 class ArCoreSessionManager @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val orientation: OrientationTracker,
     private val logger: Logger,
 ) {
     @Volatile var session: Session? = null
@@ -54,6 +56,7 @@ class ArCoreSessionManager @Inject constructor(
         val current = session ?: create() ?: return false
         return try {
             current.resume()
+            orientation.start()
             isResumed = true
             mutableState.value = ArSessionState.Running(cameraConfigDescription)
             true
@@ -68,6 +71,7 @@ class ArCoreSessionManager @Inject constructor(
         if (!isResumed) return
         isResumed = false
         session?.pause()
+        orientation.stop()
         mutableState.value = ArSessionState.Paused
     }
 

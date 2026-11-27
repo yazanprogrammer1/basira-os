@@ -1,9 +1,13 @@
 package com.basira.os.core.tracking.arcore
 
+import android.os.SystemClock
 import android.view.Surface
 import com.basira.os.core.common.camera.CameraFrame
 import com.basira.os.core.common.camera.CameraFrameSource
 import com.basira.os.core.common.logging.Logger
+import com.basira.os.core.common.math.QuatMath
+import com.basira.os.core.tracking.orientation.OrientationTracker
+import com.basira.os.core.tracking.orientation.ViewFrame
 import com.google.ar.core.Coordinates2d
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingState
@@ -22,10 +26,17 @@ import kotlin.math.min
 @Singleton
 class ArCoreCameraFrameSource @Inject constructor(
     private val sessions: ArCoreSessionManager,
+    private val orientation: OrientationTracker,
     private val logger: Logger,
 ) : CameraFrameSource {
 
     private val frame = CameraFrame()
+    private val capture = FloatArray(QuatMath.SIZE)
+    private val now = FloatArray(QuatMath.SIZE)
+    private val deviceToView = FloatArray(QuatMath.SIZE)
+    private val scratchA = FloatArray(QuatMath.SIZE)
+    private val scratchB = FloatArray(QuatMath.SIZE)
+    private var viewFrameRotation = -1
     private var cameraTextureId = -1
     private var attachedSession: Session? = null
 
@@ -86,11 +97,40 @@ class ArCoreCameraFrameSource @Inject constructor(
             frame.setIntrinsics(size[0], size[1], focal[0], focal[1])
             logger.d(TAG, "Intrinsics ${size[0]}x${size[1]} f=(${focal[0]}, ${focal[1]})")
         }
+        updateReprojection(timestamp, rotation)
         return frame
+    }
+
+    /**
+     * Head rotation between the camera capture and the predicted display time, from the high-rate
+     * orientation sensor (ARCore's own pose is only as fresh as the 30 fps camera).
+     */
+    private fun updateReprojection(captureNs: Long, rotation: Int) {
+        val displayNs = SystemClock.elapsedRealtimeNanos() + DISPLAY_PREDICTION_NS
+        // A camera clock on another time base would show up as a negative or huge image age.
+        val imageAge = displayNs - captureNs
+        if (imageAge < 0L || imageAge > MAX_IMAGE_AGE_NS ||
+            !orientation.sampleAt(displayNs, now) ||
+            !orientation.sampleAt(captureNs, capture)
+        ) {
+            frame.setReprojection(valid = false, degrees = 0f)
+            return
+        }
+        if (rotation != viewFrameRotation) {
+            ViewFrame.deviceToView(rotation, deviceToView)
+            viewFrameRotation = rotation
+        }
+        ViewFrame.captureToNowInView(capture, now, deviceToView, scratchA, scratchB, frame.reprojection)
+        frame.setReprojection(valid = true, degrees = QuatMath.angleDegrees(frame.reprojection))
     }
 
     private companion object {
         const val TAG = "ArFrames"
+
+        /** About one frame: the image reaches the eye roughly one vsync after we draw it. */
+        const val DISPLAY_PREDICTION_NS = 16_000_000L
+
+        const val MAX_IMAGE_AGE_NS = 500_000_000L
 
         /** bottom-left, bottom-right, top-left, top-right */
         val NDC_CORNERS = floatArrayOf(-1f, -1f, 1f, -1f, -1f, 1f, 1f, 1f)
