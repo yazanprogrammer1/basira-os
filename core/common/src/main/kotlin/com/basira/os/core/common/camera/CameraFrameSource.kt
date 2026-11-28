@@ -49,6 +49,19 @@ class CameraFrame {
     var reprojectionDegrees: Float = 0f
         private set
 
+    /**
+     * world_from_view at the predicted display time, packed (tx, ty, tz, qx, qy, qz, qw):
+     * ARCore position, rotation corrected with the high-rate sensor (same correction as [reprojection]).
+     */
+    val viewPose: FloatArray = floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f, 1f)
+
+    var headTracking: HeadTracking = HeadTracking.NONE
+        private set
+
+    fun setHeadTracking(state: HeadTracking) {
+        headTracking = state
+    }
+
     fun setReprojection(valid: Boolean, degrees: Float) {
         reprojectionValid = valid
         reprojectionDegrees = degrees
@@ -88,6 +101,18 @@ class CameraFrame {
     fun markUvChanged() {
         geometryVersion++
     }
+}
+
+/** How [CameraFrame.viewPose] was obtained. */
+enum class HeadTracking {
+    /** ARCore 6DoF this frame. */
+    TRACKING,
+
+    /** ARCore lost tracking: last good position, rotation continued from the sensor. */
+    HOLDING,
+
+    /** No world pose (never tracked, or no ARCore): draw windows head-locked. */
+    NONE,
 }
 
 /**
