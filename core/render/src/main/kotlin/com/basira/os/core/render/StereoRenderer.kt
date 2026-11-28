@@ -183,7 +183,11 @@ internal class StereoRenderer(
 
         val scale = compositor.qualityLevel.eyeRenderScale
         if (scale != appliedScale) rebuildEyeBuffers(geometry, scale)
-        val worldLocked = frame != null && frame.headTracking != HeadTracking.NONE
+        // No head pose yet (tracking not started, or a frame without a camera image): skip rather than
+        // flash a head-locked window that then snaps into the room. The sensor-only 3DoF source for
+        // devices without ARCore will provide a pose here too.
+        if (frame == null || frame.headTracking == HeadTracking.NONE) return
+        val worldLocked = true
         if (worldLocked) Mat4.fromPose(frame.viewPose, worldFromView) else Mat4.identity(worldFromView)
         val halfIpd = profile.interLensDistanceMm / 2000f
 
