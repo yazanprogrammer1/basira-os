@@ -36,7 +36,7 @@ class StereoCompositor @Inject constructor(
     @Volatile internal var renderMode: RenderMode = RenderMode.PASSTHROUGH
         private set
 
-    @Volatile private var storedProfile: ViewerProfile = ViewerProfile.CARDBOARD_V2
+    @Volatile private var storedProfile: ViewerProfile = ViewerProfile.DEFAULT
 
     @Volatile private var previewProfile: ViewerProfile? = null
 

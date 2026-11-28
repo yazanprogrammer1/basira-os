@@ -60,5 +60,31 @@ data class ViewerProfile(
             passthroughShiftPx = 0f,
             orientation = ScreenOrientation.LANDSCAPE,
         )
+
+        /**
+         * VR Shinecon (adjustable IPD wheel + focus knob, the project's test viewer).
+         * Geometry is the middle of its adjustment ranges with the phone centred in the tray;
+         * no published distortion values exist, so k1/k2 start from Cardboard and are tuned on the
+         * calibration screen. Approximate: confirm IPD and screen-to-lens with a ruler.
+         */
+        val VR_SHINECON = ViewerProfile(
+            interLensDistanceMm = 63f,
+            screenToLensMm = 42f,
+            trayToLensCenterMm = 34.5f,
+            k1 = 0.34f,
+            k2 = 0.55f,
+            maxFovDeg = 55f,
+            passthroughShiftPx = 0f,
+            orientation = ScreenOrientation.LANDSCAPE,
+        )
+
+        /** Used until the user saves a calibration. */
+        val DEFAULT = VR_SHINECON
+
+        /** Profiles offered as one-tap starting points on the calibration screen. */
+        val PRESETS: List<Pair<String, ViewerProfile>> = listOf(
+            "VR Shinecon" to VR_SHINECON,
+            "Cardboard v2" to CARDBOARD_V2,
+        )
     }
 }

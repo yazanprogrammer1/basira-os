@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class CalibrationUiState(
-    val profile: ViewerProfile = ViewerProfile.CARDBOARD_V2,
+    val profile: ViewerProfile = ViewerProfile.DEFAULT,
     val selected: CalibrationParam = CalibrationParam.IPD,
     val showCamera: Boolean = false,
     val panelVisible: Boolean = true,
@@ -80,9 +80,15 @@ class CalibrationViewModel @Inject constructor(
 
     fun togglePanel() = mutableState.update { it.copy(panelVisible = !it.panelVisible) }
 
+    /** Starts from a known viewer, keeping the orientation and size the user already chose. */
+    fun applyPreset(preset: ViewerProfile) {
+        val current = state.value.profile
+        apply(preset.copy(orientation = current.orientation, passthroughScale = current.passthroughScale))
+    }
+
     fun reset() {
         viewModelScope.launch { store.reset() }
-        apply(ViewerProfile.CARDBOARD_V2, save = false)
+        apply(ViewerProfile.DEFAULT, save = false)
     }
 
     private fun apply(profile: ViewerProfile, save: Boolean = true) {

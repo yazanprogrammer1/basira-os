@@ -54,6 +54,12 @@ class CalibrationParamTest {
     }
 
     @Test
+    fun `presets are already inside the plausible ranges`() {
+        ViewerProfile.PRESETS.forEach { (name, preset) -> assertEquals(name, preset, preset.sanitized()) }
+        assertEquals(ViewerProfile.VR_SHINECON, ViewerProfile.DEFAULT)
+    }
+
+    @Test
     fun `labels are formatted with units`() {
         assertEquals("64.0 mm", CalibrationParam.IPD.format(base))
         assertEquals("0.34", CalibrationParam.K1.format(base))

@@ -83,6 +83,7 @@
     <string name="calib_fov">مجال الرؤية</string>
     <string name="calib_shift">إزاحة الكاميرا</string>
     <string name="calib_scale">حجم العرض</string>
+    <string name="calib_presets">الصندوق:</string>
     <string name="calib_hint_in_viewer">أزرار الصوت ± · لمسة = التالي</string>
     <string name="calib_show_camera">الكاميرا</string>
     <string name="calib_show_grid">الشبكة</string>

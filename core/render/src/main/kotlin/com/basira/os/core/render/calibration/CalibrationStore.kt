@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
-/** Persisted lens calibration. Emits [ViewerProfile.CARDBOARD_V2] until the user saves something. */
+/** Persisted lens calibration. Emits [ViewerProfile.DEFAULT] until the user saves something. */
 interface CalibrationStore {
     val profile: Flow<ViewerProfile>
 
@@ -57,7 +57,7 @@ class DataStoreCalibrationStore @Inject constructor(
     }
 
     private fun toProfile(prefs: Preferences): ViewerProfile {
-        val d = ViewerProfile.CARDBOARD_V2
+        val d = ViewerProfile.DEFAULT
         return ViewerProfile(
             interLensDistanceMm = prefs[IPD] ?: d.interLensDistanceMm,
             screenToLensMm = prefs[SCREEN_TO_LENS] ?: d.screenToLensMm,

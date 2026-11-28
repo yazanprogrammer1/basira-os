@@ -34,6 +34,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.basira.os.R
+import com.basira.os.core.common.viewer.ViewerProfile
 import com.basira.os.passthrough.EyeLabel
 import com.basira.os.stereo.PerEyeOverlay
 import com.basira.os.stereo.StereoSurface
@@ -130,6 +131,20 @@ private fun ControlPanel(state: CalibrationUiState, viewModel: CalibrationViewMo
                 colors = SliderDefaults.colors(thumbColor = BasiraColors.Emerald, activeTrackColor = BasiraColors.Emerald),
                 modifier = Modifier.weight(1f),
             )
+        }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(vertical = 4.dp),
+        ) {
+            Text(stringResource(R.string.calib_presets), color = BasiraColors.TextSubtle, style = MaterialTheme.typography.labelMedium)
+            ViewerProfile.PRESETS.forEach { (name, preset) ->
+                ParamChip(
+                    text = name,
+                    selected = state.profile.copy(orientation = preset.orientation, passthroughScale = preset.passthroughScale) == preset,
+                    onClick = { viewModel.applyPreset(preset) },
+                )
+            }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
             PanelButton(stringResource(if (state.showCamera) R.string.calib_show_grid else R.string.calib_show_camera), viewModel::toggleCamera)
