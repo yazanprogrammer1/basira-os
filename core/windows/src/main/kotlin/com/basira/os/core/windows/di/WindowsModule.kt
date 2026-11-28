@@ -1,7 +1,7 @@
 package com.basira.os.core.windows.di
 
 import com.basira.os.core.windows.SpatialWindowManager
-import com.basira.os.core.windows.StubSpatialWindowManager
+import com.basira.os.core.windows.WebSpatialWindowManager
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -14,5 +14,5 @@ internal abstract class WindowsModule {
 
     @Binds
     @Singleton
-    abstract fun bindSpatialWindowManager(impl: StubSpatialWindowManager): SpatialWindowManager
+    abstract fun bindSpatialWindowManager(impl: WebSpatialWindowManager): SpatialWindowManager
 }

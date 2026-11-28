@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>بصيرة</title>
+<style>
+  :root {
+    --emerald: #10B981; --mint: #6EE7B7; --night: #0B0F0D; --glass: #141A17;
+    --border: rgba(255,255,255,0.12); --text: #F4F7F5; --muted: #B8C4BE; --subtle: #9FB0A7;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--night); color: var(--text);
+    font-family: "IBM Plex Sans Arabic", "Noto Sans Arabic", sans-serif; }
+  body { padding: 28px 36px; display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; }
+  header { grid-column: 1 / -1; display: flex; align-items: center; gap: 16px; }
+  .logo { width: 56px; height: 56px; border-radius: 16px; background: var(--emerald);
+    display: grid; place-items: center; }
+  .logo svg { width: 36px; height: 36px; }
+  h1 { margin: 0; font-size: 34px; font-weight: 700; }
+  .tag { margin: 2px 0 0; color: var(--mint); font-size: 16px; }
+  .clock { margin-inline-start: auto; font: 600 30px/1 ui-monospace, monospace; color: var(--mint);
+    direction: ltr; }
+  .card { background: var(--glass); border: 1px solid var(--border); border-radius: 22px; padding: 20px 24px; }
+  .label { color: var(--mint); font-size: 14px; margin: 0 0 10px; }
+  .t14 { font-size: 14px; } .t16 { font-size: 16px; } .t20 { font-size: 20px; } .t24 { font-size: 24px; }
+  p { margin: 0 0 10px; line-height: 1.55; }
+  .muted { color: var(--muted); }
+  .bars { display: flex; gap: 6px; height: 36px; align-items: end; margin-top: 8px; }
+  .bars i { width: 10px; background: var(--emerald); border-radius: 4px; animation: b 1.2s ease-in-out infinite; }
+  @keyframes b { 0%,100% { height: 20%; } 50% { height: 100%; } }
+  .grid { height: 120px; border-radius: 14px; margin-top: 12px;
+    background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 20px 20px; border: 1px solid var(--border); }
+</style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <svg viewBox="0 0 48 48" fill="none" stroke="#0B0F0D" stroke-width="3.5" stroke-linejoin="round">
+        <path d="M6 24 Q24 6 42 24 Q24 42 6 24 Z"/><circle cx="24" cy="24" r="6" fill="#0B0F0D"/>
+      </svg>
+    </div>
+    <div>
+      <h1>بصيرة</h1>
+      <p class="tag">شاشتك صارت بحجم غرفتك.</p>
+    </div>
+    <div class="clock" id="clock">--:--:--</div>
+  </header>
+
+  <section class="card">
+    <p class="label">اختبار القراءة</p>
+    <p class="t24">هاد سطر بحجم ٢٤ بكسل: لازم يكون واضح كتير.</p>
+    <p class="t20">هاد سطر بحجم ٢٠ بكسل: عناوين صغيرة وأزرار.</p>
+    <p class="t16">هاد سطر بحجم ١٦ بكسل، حجم النص العادي بأغلب المواقع. إذا قدرت تقراه بسهولة من متر ونص، النافذة نجحت.</p>
+    <p class="t14 muted">وهاد ١٤ بكسل، تعليقات وتواريخ. مقبول إذا احتجت تقرّب شوي.</p>
+  </section>
+
+  <section class="card">
+    <p class="label">اختبار الحركة</p>
+    <p class="t16 muted">الساعة فوق والأعمدة لازم يتحرّكوا بنعومة. إذا وقفوا، النافذة ما عم تتحدّث.</p>
+    <div class="bars"><i></i><i style="animation-delay:.1s"></i><i style="animation-delay:.2s"></i><i style="animation-delay:.3s"></i><i style="animation-delay:.4s"></i><i style="animation-delay:.5s"></i><i style="animation-delay:.6s"></i></div>
+    <div class="grid"></div>
+  </section>
+
+  <script>
+    const clock = document.getElementById('clock');
+    const pad = n => String(n).padStart(2, '0');
+    function tick() {
+      const d = new Date();
+      clock.textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+    }
+    tick(); setInterval(tick, 1000);
+  </script>
+</body>
+</html>
