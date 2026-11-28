@@ -57,6 +57,19 @@ class HeadPoseTest {
     }
 
     @Test
+    fun `holding gives up after the limit instead of freezing a wrong position`() {
+        val f = HeadPoseFilter(maxHoldNs = 3_000 * ms)
+        val out = FloatArray(7)
+        f.update(true, pose(0f, 1.6f, 0f, 0f), null, yaw(0f), c, 0, out)
+        assertEquals(HeadTracking.HOLDING, f.update(false, FloatArray(7), null, yaw(0f), c, 100 * ms, out))
+        assertEquals(HeadTracking.HOLDING, f.update(false, FloatArray(7), null, yaw(0f), c, 3_000 * ms, out))
+        assertEquals(HeadTracking.NONE, f.update(false, FloatArray(7), null, yaw(0f), c, 3_200 * ms, out))
+        // ARCore returns: straight to the tracked pose, no fade from a stale held one.
+        assertEquals(HeadTracking.TRACKING, f.update(true, pose(2f, 1.6f, 0f, 0f), null, yaw(0f), c, 9_000 * ms, out))
+        assertEquals(2f, out[0], 1e-6f)
+    }
+
+    @Test
     fun `recovery fades the jump instead of snapping`() {
         val f = HeadPoseFilter(recoveryNs = 300 * ms)
         val out = FloatArray(7)

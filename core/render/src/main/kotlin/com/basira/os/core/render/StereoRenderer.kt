@@ -286,7 +286,7 @@ internal class StereoRenderer(
         } else {
             -1f
         }
-        stats.onFrame(now, cameraAgeMs, frame?.isTracking == true, reprojectionDegrees, frame?.headTracking ?: HeadTracking.NONE)
+        stats.onFrame(now, cameraAgeMs, frame?.isTracking == true, reprojectionDegrees, frame?.headTracking ?: HeadTracking.NONE, frame?.trackingFailure ?: "")
         if (now - lastPublishNs >= PUBLISH_INTERVAL_NS) {
             lastPublishNs = now
             compositor.publish(stats.snapshot())

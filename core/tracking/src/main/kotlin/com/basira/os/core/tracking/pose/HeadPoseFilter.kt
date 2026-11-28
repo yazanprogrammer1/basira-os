@@ -9,19 +9,24 @@ import com.basira.os.core.tracking.orientation.ViewFrame
  * world_from_view at display time, from three sources (pure logic, GL thread, allocation-free):
  * - TRACKING: ARCore position at capture; rotation = ARCore rotation at capture, advanced to display
  *   time by the sensor (the same correction the camera image gets, so windows and room move together).
- * - HOLDING: ARCore lost tracking. Keep the last good position, keep turning with the sensor.
+ * - HOLDING: ARCore lost tracking. Keep the last good position, keep turning with the sensor,
+ *   for at most [maxHoldNs]; then NONE until ARCore tracks again.
  * - Recovery: when ARCore returns, its pose can differ from what we held (we did not follow your
  *   steps). Instead of jumping, the difference fades out over [recoveryNs].
  *
  * Poses are packed (tx, ty, tz, qx, qy, qz, qw).
  */
-class HeadPoseFilter(private val recoveryNs: Long = DEFAULT_RECOVERY_NS) {
+class HeadPoseFilter(
+    private val recoveryNs: Long = DEFAULT_RECOVERY_NS,
+    private val maxHoldNs: Long = DEFAULT_MAX_HOLD_NS,
+) {
 
     private val lastGood = FloatArray(Mat4.POSE_SIZE)
     private val lastGoodSensor = FloatArray(QuatMath.SIZE)
     private var hasLastGood = false
     private var hasLastGoodSensor = false
     private var holding = false
+    private var holdStartNs = Long.MIN_VALUE
 
     /** The pose produced on the last HOLDING frame: where the recovery fade starts from. */
     private val lastHeld = FloatArray(Mat4.POSE_SIZE)
@@ -81,6 +86,15 @@ class HeadPoseFilter(private val recoveryNs: Long = DEFAULT_RECOVERY_NS) {
         }
 
         if (!hasLastGood) return HeadTracking.NONE
+        if (!holding) holdStartNs = nowNs
+        if (nowNs - holdStartNs > maxHoldNs) {
+            // Holding only bridges short gaps. Past that, the frozen position is a lie (the user walks on):
+            // report no pose, so windows hide until ARCore relocalises and anchors put them back.
+            holding = false
+            hasLastGood = false
+            recoveryStartNs = Long.MIN_VALUE
+            return HeadTracking.NONE
+        }
         holding = true
         recoveryStartNs = Long.MIN_VALUE
         loadRotation(lastGood, r)
@@ -135,5 +149,6 @@ class HeadPoseFilter(private val recoveryNs: Long = DEFAULT_RECOVERY_NS) {
 
     companion object {
         const val DEFAULT_RECOVERY_NS = 300_000_000L
+        const val DEFAULT_MAX_HOLD_NS = 3_000_000_000L
     }
 }

@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.basira.os.R
+import com.basira.os.core.common.camera.HeadTracking
 import com.basira.os.core.common.quality.QualityLevel
 import com.basira.os.core.tracking.arcore.ArSessionError
 import com.basira.os.core.tracking.arcore.ArSessionState
@@ -57,12 +58,37 @@ fun PassthroughScreen(viewModel: PassthroughViewModel) {
         val failure = overlay.session as? ArSessionState.Failed
         if (failure != null) {
             PerEyeOverlay { EyeLabel(stringResource(sessionErrorText(failure.error)), BasiraColors.Live) }
-        } else if (overlay.visible) {
-            PerEyeOverlay(alignment = Alignment.Center) {
-                DevStats(overlay, Modifier.offset(y = (-110).dp))
+        } else {
+            if (overlay.visible) {
+                PerEyeOverlay(alignment = Alignment.Center) {
+                    DevStats(overlay, Modifier.offset(y = (-110).dp))
+                }
+            }
+            // Always shown (not a developer detail): windows are hidden while the room is lost,
+            // and the user needs to know why and what to do.
+            val lost = overlay.session is ArSessionState.Running &&
+                overlay.stats.headTracking != HeadTracking.TRACKING &&
+                overlay.stats.trackingFailure.isNotEmpty()
+            if (lost) {
+                PerEyeOverlay(alignment = Alignment.Center) {
+                    EyeLabel(
+                        stringResource(trackingLostText(overlay.stats.trackingFailure)),
+                        BasiraColors.Warning,
+                        Modifier.offset(y = 150.dp),
+                    )
+                }
             }
         }
     }
+}
+
+/** ARCore TrackingFailureReason -> what to do about it, in Arabic. */
+private fun trackingLostText(reason: String): Int = when (reason) {
+    "INSUFFICIENT_LIGHT" -> R.string.tracking_lost_light
+    "EXCESSIVE_MOTION" -> R.string.tracking_lost_motion
+    "INSUFFICIENT_FEATURES" -> R.string.tracking_lost_features
+    "CAMERA_UNAVAILABLE" -> R.string.tracking_lost_camera
+    else -> R.string.tracking_lost_generic
 }
 
 @Composable
@@ -85,9 +111,9 @@ private fun DevStats(state: OverlayState, modifier: Modifier = Modifier) {
         else -> String.format(Locale.US, "reproj %.1f°", s.reprojectionDegrees)
     }
     val head = when (s.headTracking) {
-        com.basira.os.core.common.camera.HeadTracking.TRACKING -> "6DoF"
-        com.basira.os.core.common.camera.HeadTracking.HOLDING -> "holding"
-        com.basira.os.core.common.camera.HeadTracking.NONE -> "3DoF"
+        HeadTracking.TRACKING -> "6DoF"
+        HeadTracking.HOLDING -> "holding ${s.trackingFailure.lowercase()}"
+        HeadTracking.NONE -> "lost ${s.trackingFailure.lowercase()}"
     }
     val line2 = "$camera · $reprojection · $head · win ${state.windowCount} · $battery · $headroom · ${state.quality}"
     val color = when (state.quality) {

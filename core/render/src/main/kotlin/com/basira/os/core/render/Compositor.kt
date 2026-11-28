@@ -20,6 +20,8 @@ data class FrameStats(
     /** Head rotation applied to the camera image this frame; -1 when reprojection is off or unavailable. */
     val reprojectionDegrees: Float = -1f,
     val headTracking: HeadTracking = HeadTracking.NONE,
+    /** ARCore's TrackingFailureReason while not tracking, "" while tracking. */
+    val trackingFailure: String = "",
 ) {
     val jankRatio: Float get() = if (totalFrames == 0L) 0f else jankyFrames.toFloat() / totalFrames
 }

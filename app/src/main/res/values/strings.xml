@@ -72,6 +72,11 @@
     <string name="session_error_unsupported">الجهاز مش مدعوم من ARCore</string>
     <string name="session_error_permission">لازم صلاحية الكاميرا</string>
     <string name="session_error_camera">الكاميرا مشغولة بتطبيق تاني</string>
+    <string name="tracking_lost_generic">عم نتعرّف على الغرفة… حرّك راسك ببطء</string>
+    <string name="tracking_lost_light">الغرفة معتمة: شغّل ضو أو افتح البرداية</string>
+    <string name="tracking_lost_motion">عم تتحرك بسرعة: بشويش شوي</string>
+    <string name="tracking_lost_features">طلّع على أشياء فيها تفاصيل، مش حيط فاضي</string>
+    <string name="tracking_lost_camera">الكاميرا مسكّرة: تأكد إنها قدّام فتحة الصندوق</string>
     <string name="session_error_unknown">صار خطأ بـ ARCore، شوف الـ logcat</string>
 
     <!-- Calibration -->

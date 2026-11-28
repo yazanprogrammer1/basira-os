@@ -126,6 +126,7 @@ class ArCoreCameraFrameSource @Inject constructor(
     /** Display-time head pose for world-locked windows, and anchor upkeep. */
     private fun updateHeadPose(camera: com.google.ar.core.Camera, session: Session, arFrame: com.google.ar.core.Frame) {
         val tracking = camera.trackingState == TrackingState.TRACKING
+        frame.setTrackingFailure(if (tracking) "" else camera.trackingFailureReason.name)
         if (tracking) {
             val p = camera.displayOrientedPose
             capturePose[0] = p.tx(); capturePose[1] = p.ty(); capturePose[2] = p.tz()

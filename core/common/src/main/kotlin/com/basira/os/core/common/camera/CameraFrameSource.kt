@@ -58,6 +58,14 @@ class CameraFrame {
     var headTracking: HeadTracking = HeadTracking.NONE
         private set
 
+    /** Why ARCore is not tracking (its TrackingFailureReason name), or "" while tracking. */
+    var trackingFailure: String = ""
+        private set
+
+    fun setTrackingFailure(reason: String) {
+        trackingFailure = reason
+    }
+
     fun setHeadTracking(state: HeadTracking) {
         headTracking = state
     }

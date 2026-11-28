@@ -26,7 +26,7 @@ import javax.inject.Singleton
 object PerfCsv {
     const val HEADER =
         "t_s,fps,frame_ms_avg,frame_ms_p95,janky_total,frames_total,camera_age_ms,tracking," +
-            "thermal_status,headroom,battery_c,quality,reproj_deg,head"
+            "thermal_status,headroom,battery_c,quality,reproj_deg,head,track_fail"
 
     fun row(tSeconds: Long, stats: FrameStats, thermal: ThermalSnapshot?, quality: QualityLevel): String =
         listOf(
@@ -44,6 +44,7 @@ object PerfCsv {
             quality.name,
             if (stats.reprojectionDegrees >= 0f) fmt(stats.reprojectionDegrees, 2) else "",
             stats.headTracking.name,
+            stats.trackingFailure,
         ).joinToString(",")
 
     private fun fmt(value: Float, decimals: Int) = "%.${decimals}f".format(Locale.US, value)
