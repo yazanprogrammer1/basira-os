@@ -1,8 +1,6 @@
 package com.basira.os.passthrough
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,7 +11,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -33,8 +30,10 @@ import com.basira.os.ui.system.theme.BasiraShapes
 import java.util.Locale
 
 /**
- * Stereo passthrough. A tap or volume up opens a window or recenters it; volume down toggles the overlay;
+ * Stereo passthrough. Volume up opens a window or recenters it; volume down toggles the overlay;
  * a long press on volume down toggles camera reprojection (A/B in the viewer).
+ * No touch input on purpose: the viewer's foam and clamps press the screen and fired false taps
+ * that kept re-placing the window.
  */
 @Composable
 fun PassthroughScreen(viewModel: PassthroughViewModel) {
@@ -47,15 +46,6 @@ fun PassthroughScreen(viewModel: PassthroughViewModel) {
             sessions = viewModel.sessions,
             frameSource = viewModel.frameSource,
             modifier = Modifier.fillMaxSize(),
-        )
-        Box(
-            Modifier
-                .fillMaxSize()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = viewModel::onViewerButton,
-                ),
         )
         val failure = overlay.session as? ArSessionState.Failed
         if (failure != null) {

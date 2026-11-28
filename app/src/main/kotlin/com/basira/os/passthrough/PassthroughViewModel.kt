@@ -68,7 +68,7 @@ class PassthroughViewModel @Inject constructor(
     }
 
     /**
-     * A tap or the viewer button: opens the first window, then brings it back in front of you.
+     * Volume up: opens the first window, then brings it back in front of you.
      * (Gaze + pinch arrive in phase 3.)
      */
     fun onViewerButton() {
