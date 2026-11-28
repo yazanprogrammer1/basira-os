@@ -119,12 +119,12 @@ class ArCoreCameraFrameSource @Inject constructor(
             viewFrameRotation = rotation
         }
         updateReprojection(timestamp)
-        updateHeadPose(camera, session)
+        updateHeadPose(camera, session, arFrame)
         return frame
     }
 
     /** Display-time head pose for world-locked windows, and anchor upkeep. */
-    private fun updateHeadPose(camera: com.google.ar.core.Camera, session: Session) {
+    private fun updateHeadPose(camera: com.google.ar.core.Camera, session: Session, arFrame: com.google.ar.core.Frame) {
         val tracking = camera.trackingState == TrackingState.TRACKING
         if (tracking) {
             val p = camera.displayOrientedPose
@@ -141,7 +141,9 @@ class ArCoreCameraFrameSource @Inject constructor(
             out = frame.viewPose,
         )
         frame.setHeadTracking(state)
-        anchors.onFrame(session, tracking, frame.viewPose)
+        // Display geometry is the camera texture size, so its centre is the centre of the view.
+        val size = session.cameraConfig.textureSize
+        anchors.onFrame(session, arFrame, tracking, frame.viewPose, size.width / 2f, size.height / 2f)
     }
 
     /**

@@ -38,4 +38,27 @@ object Placement {
             yaw,
         )
     }
+
+    /**
+     * On a surface point the viewer is looking at: [offsetMeters] in front of it (towards the viewer),
+     * upright, facing the viewer. Returns the viewer-to-surface distance.
+     */
+    fun onSurface(viewPose: FloatArray, px: Float, py: Float, pz: Float, offsetMeters: Float, out: FloatArray): Float {
+        val dx = px - viewPose[0]
+        val dy = py - viewPose[1]
+        val dz = pz - viewPose[2]
+        val distance = sqrt(dx * dx + dy * dy + dz * dz)
+        val k = if (distance > 1e-4f) offsetMeters / distance else 0f
+        var fx = dx
+        var fz = dz
+        val flat = sqrt(fx * fx + fz * fz)
+        if (flat < 1e-3f) {
+            fx = 0f; fz = -1f
+        } else {
+            fx /= flat; fz /= flat
+        }
+        QuatMath.fromAxisAngle(0f, 1f, 0f, atan2(-fx, -fz), yaw)
+        Mat4.setPose(out, px - dx * k, py - dy * k, pz - dz * k, yaw)
+        return distance
+    }
 }

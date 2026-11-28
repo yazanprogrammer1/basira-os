@@ -209,7 +209,7 @@ internal class StereoRenderer(
                 }
                 Mat4.multiply(eyeFromWorld, worldFromPanel, eyeFromPanel)
                 Mat4.multiply(projections[eye], eyeFromPanel, mvp)
-                windowPass.draw(mvp, panel, brightness = 1f)
+                windowPass.draw(mvp, panel, scale = anchors.scale(panel.id), brightness = 1f)
             }
         }
 

@@ -90,4 +90,19 @@ class HeadPoseTest {
         assertEquals(1f, normal[0], 1e-5f)
         assertEquals(0f, normal[1], 1e-5f)
     }
+
+    @Test
+    fun `surface placement sits just in front of the wall and faces the viewer`() {
+        val out = FloatArray(7)
+        val view = pose(0f, 1.6f, 0f, 0f)
+        // Wall point 3 m ahead, slightly below eye level.
+        val d = Placement.onSurface(view, 0f, 1.4f, -3f, 0.02f, out)
+        assertEquals(Math.sqrt(9.0 + 0.04).toFloat(), d, 1e-5f)
+        assertEquals(-3f + 0.02f * 3f / d, out[2], 1e-5f)
+        assertEquals(1.4f + 0.02f * 0.2f / d, out[1], 1e-5f)
+        val normal = FloatArray(3)
+        QuatMath.rotate(floatArrayOf(out[3], out[4], out[5], out[6]), 0f, 0f, 1f, normal)
+        assertEquals(1f, normal[2], 1e-5f) // faces back towards the viewer (+z)
+        assertEquals(0f, normal[1], 1e-5f) // upright
+    }
 }

@@ -220,13 +220,13 @@ internal class WindowPass {
         GLES30.glBindVertexArray(0)
     }
 
-    fun draw(mvp: FloatArray, panel: PanelEntry, brightness: Float) {
+    fun draw(mvp: FloatArray, panel: PanelEntry, scale: Float, brightness: Float) {
         GLES30.glUseProgram(program)
         GLES30.glUniformMatrix4fv(mvpLocation, 1, false, mvp, 0)
-        GLES30.glUniform2f(sizeLocation, panel.widthMeters, panel.heightMeters)
+        GLES30.glUniform2f(sizeLocation, panel.widthMeters * scale, panel.heightMeters * scale)
         GLES30.glUniformMatrix4fv(texMatrixLocation, 1, false, panel.texMatrix, 0)
-        GLES30.glUniform1f(radiusLocation, CORNER_RADIUS_M)
-        GLES30.glUniform1f(borderLocation, BORDER_M)
+        GLES30.glUniform1f(radiusLocation, CORNER_RADIUS_M * scale)
+        GLES30.glUniform1f(borderLocation, BORDER_M * scale)
         GLES30.glUniform1f(brightnessLocation, brightness)
         GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
         GLES30.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, panel.texture)

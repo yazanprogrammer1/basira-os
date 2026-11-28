@@ -103,12 +103,12 @@ class WebSpatialWindowManager @Inject constructor(
 
     companion object {
         /**
-         * 1280x800 px at 240 dpi = an 853 CSS-px-wide page; on 1.4 m at 1.5 m (about 50 degrees),
-         * 16 CSS px body text is about 1 degree tall: readable through phone viewer lenses.
+         * 1280x800 px at 320 dpi = a 640 CSS-px-wide page on 1.4 m at 1.5 m (about 50 degrees): 16 CSS px
+         * text is about 1.3 degrees tall. At 240 dpi only 24 px text was comfortable in a VR Shinecon.
          */
         const val PANEL_WIDTH_PX = 1280
         const val PANEL_HEIGHT_PX = 800
-        const val PANEL_DENSITY_DPI = 240
+        const val PANEL_DENSITY_DPI = 320
         const val PANEL_WIDTH_M = 1.4f
         const val PANEL_HEIGHT_M = 0.875f
         const val DEFAULT_DISTANCE_M = 1.5f
