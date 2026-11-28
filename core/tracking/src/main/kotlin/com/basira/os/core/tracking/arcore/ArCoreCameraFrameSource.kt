@@ -5,6 +5,8 @@ import android.view.Surface
 import com.basira.os.core.common.camera.CameraFrame
 import com.basira.os.core.common.camera.CameraFrameSource
 import com.basira.os.core.common.logging.Logger
+import com.basira.os.core.common.math.Mat4
+import com.basira.os.core.tracking.pose.HeadPoseFilter
 import com.basira.os.core.common.math.QuatMath
 import com.basira.os.core.tracking.orientation.OrientationTracker
 import com.basira.os.core.tracking.orientation.ViewFrame
@@ -27,8 +29,13 @@ import kotlin.math.min
 class ArCoreCameraFrameSource @Inject constructor(
     private val sessions: ArCoreSessionManager,
     private val orientation: OrientationTracker,
+    private val anchors: ArCoreWorldAnchors,
     private val logger: Logger,
 ) : CameraFrameSource {
+
+    private val headFilter = HeadPoseFilter()
+    private val capturePose = FloatArray(Mat4.POSE_SIZE)
+    private var sensorNowValid = false
 
     private val frame = CameraFrame()
     private val capture = FloatArray(QuatMath.SIZE)
@@ -65,6 +72,8 @@ class ArCoreCameraFrameSource @Inject constructor(
             appliedRotation = -1
             uvValid = false
             frame.clearIntrinsics()
+            headFilter.reset()
+            anchors.onSessionChanged()
         }
         val rotation = displayRotation
         if (rotation != appliedRotation) {
@@ -105,28 +114,50 @@ class ArCoreCameraFrameSource @Inject constructor(
             frame.setIntrinsics(size[0], size[1], focal[0], focal[1])
             logger.d(TAG, "Intrinsics ${size[0]}x${size[1]} f=(${focal[0]}, ${focal[1]})")
         }
-        updateReprojection(timestamp, rotation)
+        if (rotation != viewFrameRotation) {
+            ViewFrame.deviceToView(rotation, deviceToView)
+            viewFrameRotation = rotation
+        }
+        updateReprojection(timestamp)
+        updateHeadPose(camera, session)
         return frame
+    }
+
+    /** Display-time head pose for world-locked windows, and anchor upkeep. */
+    private fun updateHeadPose(camera: com.google.ar.core.Camera, session: Session) {
+        val tracking = camera.trackingState == TrackingState.TRACKING
+        if (tracking) {
+            val p = camera.displayOrientedPose
+            capturePose[0] = p.tx(); capturePose[1] = p.ty(); capturePose[2] = p.tz()
+            p.getRotationQuaternion(capturePose, 3)
+        }
+        val state = headFilter.update(
+            tracking = tracking,
+            capturePose = capturePose,
+            captureToNow = if (frame.reprojectionValid) frame.reprojection else null,
+            sensorNow = if (sensorNowValid) now else null,
+            deviceToView = deviceToView,
+            nowNs = SystemClock.elapsedRealtimeNanos(),
+            out = frame.viewPose,
+        )
+        frame.setHeadTracking(state)
+        anchors.onFrame(session, tracking, frame.viewPose)
     }
 
     /**
      * Head rotation between the camera capture and the predicted display time, from the high-rate
      * orientation sensor (ARCore's own pose is only as fresh as the 30 fps camera).
      */
-    private fun updateReprojection(captureNs: Long, rotation: Int) {
+    private fun updateReprojection(captureNs: Long) {
         val displayNs = SystemClock.elapsedRealtimeNanos() + DISPLAY_PREDICTION_NS
+        sensorNowValid = orientation.sampleAt(displayNs, now)
         // A camera clock on another time base would show up as a negative or huge image age.
         val imageAge = displayNs - captureNs
-        if (imageAge < 0L || imageAge > MAX_IMAGE_AGE_NS ||
-            !orientation.sampleAt(displayNs, now) ||
+        if (imageAge < 0L || imageAge > MAX_IMAGE_AGE_NS || !sensorNowValid ||
             !orientation.sampleAt(captureNs, capture)
         ) {
             frame.setReprojection(valid = false, degrees = 0f)
             return
-        }
-        if (rotation != viewFrameRotation) {
-            ViewFrame.deviceToView(rotation, deviceToView)
-            viewFrameRotation = rotation
         }
         ViewFrame.captureToNowInView(capture, now, deviceToView, scratchA, scratchB, frame.reprojection)
         frame.setReprojection(valid = true, degrees = QuatMath.angleDegrees(frame.reprojection))
