@@ -76,6 +76,74 @@ void main() {
 }
 """
 
+    /** Eye buffer over the passthrough: transparent outside the lens field (premultiplied alpha). */
+    const val DISTORTION_COMPOSITE_FRAGMENT = """#version 300 es
+precision mediump float;
+uniform sampler2D uEye;
+in vec2 vCoord;
+out vec4 fragColor;
+void main() {
+    if (vCoord.x < 0.0 || vCoord.x > 1.0 || vCoord.y < 0.0 || vCoord.y > 1.0) {
+        fragColor = vec4(0.0);
+        return;
+    }
+    fragColor = texture(uEye, vCoord);
+}
+"""
+
+    /** World-space window quad; local position in [-0.5, 0.5]^2 scaled by its size in metres. */
+    const val WINDOW_VERTEX = """#version 300 es
+layout(location = 0) in vec2 aPosition;
+uniform mat4 uMvp;
+uniform vec2 uSize;
+out vec2 vLocal;
+void main() {
+    vLocal = aPosition;
+    gl_Position = uMvp * vec4(aPosition * uSize, 0.0, 1.0);
+}
+"""
+
+    /**
+     * Window content with rounded corners and a hairline glass border, drawn from a signed distance
+     * field (no extra textures). Four rotated-grid taps per pixel keep small text from shimmering:
+     * the page is minified about 2-3x on the way to the eye buffer and OES textures have no mipmaps.
+     * Output is premultiplied alpha.
+     */
+    const val WINDOW_FRAGMENT = """#version 300 es
+#extension GL_OES_EGL_image_external_essl3 : require
+precision highp float;
+uniform samplerExternalOES uPanel;
+uniform mat4 uTexMatrix;
+uniform vec2 uSize;
+uniform float uRadius;
+uniform float uBorder;
+uniform float uBrightness;
+in vec2 vLocal;
+out vec4 fragColor;
+float roundBox(vec2 p, vec2 halfSize, float r) {
+    vec2 q = abs(p) - halfSize + r;
+    return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
+}
+void main() {
+    vec2 p = vLocal * uSize;
+    float d = roundBox(p, uSize * 0.5, uRadius);
+    float aa = fwidth(d);
+    float alpha = 1.0 - smoothstep(-aa, aa, d);
+    if (alpha <= 0.0) discard;
+    vec2 uv = (uTexMatrix * vec4(vLocal + 0.5, 0.0, 1.0)).xy;
+    vec2 dx = dFdx(uv) * 0.25;
+    vec2 dy = dFdy(uv) * 0.25;
+    vec3 c = texture(uPanel, uv + dx + dy * 0.5).rgb
+           + texture(uPanel, uv - dx - dy * 0.5).rgb
+           + texture(uPanel, uv + dy - dx * 0.5).rgb
+           + texture(uPanel, uv - dy + dx * 0.5).rgb;
+    c *= 0.25 * uBrightness;
+    float border = smoothstep(-uBorder - aa, -uBorder + aa, d);
+    c = mix(c, vec3(1.0), 0.12 * border);
+    fragColor = vec4(c * alpha, alpha);
+}
+"""
+
     /**
      * Calibration pattern in eye tan-angle space (vCoord = tan angle):
      * grid every 0.1, crosshair at the optical axis, ring at 30 degrees.

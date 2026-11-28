@@ -1,5 +1,6 @@
 package com.basira.os.core.render.stats
 
+import com.basira.os.core.common.camera.HeadTracking
 import com.basira.os.core.render.FrameStats
 
 /**
@@ -20,8 +21,15 @@ class FrameStatsTracker(
     private var cameraAgeMs = -1f
     private var tracking = false
     private var reprojectionDegrees = -1f
+    private var headTracking = HeadTracking.NONE
 
-    fun onFrame(nowNs: Long, cameraAgeMs: Float, tracking: Boolean, reprojectionDegrees: Float = -1f) {
+    fun onFrame(
+        nowNs: Long,
+        cameraAgeMs: Float,
+        tracking: Boolean,
+        reprojectionDegrees: Float = -1f,
+        headTracking: HeadTracking = HeadTracking.NONE,
+    ) {
         if (lastFrameNs != NO_FRAME) {
             val interval = (nowNs - lastFrameNs) / 1_000_000f
             intervalsMs[next] = interval
@@ -34,6 +42,7 @@ class FrameStatsTracker(
         if (cameraAgeMs >= 0f) this.cameraAgeMs = cameraAgeMs
         this.tracking = tracking
         this.reprojectionDegrees = reprojectionDegrees
+        this.headTracking = headTracking
     }
 
     /** Call when rendering pauses so the gap is not counted as a slow frame. */
@@ -44,7 +53,7 @@ class FrameStatsTracker(
     }
 
     fun snapshot(): FrameStats {
-        if (count == 0) return FrameStats(totalFrames = totalFrames, jankyFrames = jankyFrames, cameraAgeMs = cameraAgeMs, tracking = tracking, reprojectionDegrees = reprojectionDegrees)
+        if (count == 0) return FrameStats(totalFrames = totalFrames, jankyFrames = jankyFrames, cameraAgeMs = cameraAgeMs, tracking = tracking, reprojectionDegrees = reprojectionDegrees, headTracking = headTracking)
         val window = intervalsMs.copyOf(count)
         val sum = window.sum()
         window.sort()
@@ -59,6 +68,7 @@ class FrameStatsTracker(
             cameraAgeMs = cameraAgeMs,
             tracking = tracking,
             reprojectionDegrees = reprojectionDegrees,
+            headTracking = headTracking,
         )
     }
 }

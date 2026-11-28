@@ -5,8 +5,11 @@ import android.opengl.GLSurfaceView
 import android.os.SystemClock
 import com.basira.os.core.common.camera.CameraFrame
 import com.basira.os.core.common.camera.CameraFrameSource
+import com.basira.os.core.common.camera.HeadTracking
 import com.basira.os.core.common.logging.Logger
+import com.basira.os.core.common.math.Mat4
 import com.basira.os.core.common.math.QuatMath
+import com.basira.os.core.common.panel.WorldAnchors
 import com.basira.os.core.common.viewer.ViewerProfile
 import com.basira.os.core.render.distortion.DistortionMeshBuilder
 import com.basira.os.core.render.distortion.DistortionModel
@@ -14,14 +17,17 @@ import com.basira.os.core.render.gl.EyeFramebuffer
 import com.basira.os.core.render.gl.GlUtil
 import com.basira.os.core.render.layout.EyeGeometry
 import com.basira.os.core.render.layout.EyeLayout
+import com.basira.os.core.render.layout.Projection
 import com.basira.os.core.render.layout.ScreenSpec
 import com.basira.os.core.render.pass.DirectCameraMath
 import com.basira.os.core.render.pass.DirectCameraPass
 import com.basira.os.core.render.pass.DistortionPass
 import com.basira.os.core.render.pass.TestPatternPass
+import com.basira.os.core.render.pass.WindowPass
 import com.basira.os.core.render.stats.FrameStatsTracker
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.roundToInt
 
 /**
@@ -36,12 +42,15 @@ import kotlin.math.roundToInt
 internal class StereoRenderer(
     private val compositor: StereoCompositor,
     private val frameSource: CameraFrameSource,
+    private val anchors: WorldAnchors,
     private val logger: Logger,
 ) : GLSurfaceView.Renderer {
 
     private lateinit var patternPass: TestPatternPass
     private lateinit var distortionPass: DistortionPass
     private lateinit var directCameraPass: DirectCameraPass
+    private lateinit var windowPass: WindowPass
+    private var glGeneration = 0
     private var oesTexture = 0
 
     private var surfaceWidth = 0
@@ -59,6 +68,17 @@ internal class StereoRenderer(
     private val captureFromNow3 = FloatArray(9)
     private val identity = floatArrayOf(0f, 0f, 0f, 1f)
 
+    // Window matrices (GL thread, reused every frame).
+    private val projections = Array(2) { FloatArray(Mat4.SIZE) }
+    private val worldFromView = FloatArray(Mat4.SIZE)
+    private val offset = FloatArray(Mat4.SIZE)
+    private val worldFromEye = FloatArray(Mat4.SIZE)
+    private val eyeFromWorld = FloatArray(Mat4.SIZE)
+    private val worldFromPanel = FloatArray(Mat4.SIZE)
+    private val eyeFromPanel = FloatArray(Mat4.SIZE)
+    private val mvp = FloatArray(Mat4.SIZE)
+    private val panelPose = FloatArray(Mat4.POSE_SIZE)
+
     private val stats = FrameStatsTracker()
     private var lastPublishNs = 0L
 
@@ -69,6 +89,8 @@ internal class StereoRenderer(
         patternPass = TestPatternPass()
         distortionPass = DistortionPass()
         directCameraPass = DirectCameraPass(distortionPass)
+        windowPass = WindowPass()
+        glGeneration = GENERATIONS.incrementAndGet()
         eyeBuffers.fill(null)
         eyes = null
         appliedProfile = null
@@ -109,6 +131,13 @@ internal class StereoRenderer(
     /** Returns the reprojection angle applied this frame, or -1 when none was. */
     private fun drawPassthrough(frame: CameraFrame?, geometry: Array<EyeGeometry>, profile: ViewerProfile): Float {
         bindScreen()
+        compositor.panels.update(glGeneration)
+        val applied = drawCamera(frame, geometry, profile)
+        drawWindows(frame, geometry, profile)
+        return applied
+    }
+
+    private fun drawCamera(frame: CameraFrame?, geometry: Array<EyeGeometry>, profile: ViewerProfile): Float {
         if (frame == null || !frame.hasIntrinsics || frame.geometryVersion <= 0) return -1f
 
         val reprojecting = frame.reprojectionValid && compositor.reprojectionEnabled
@@ -140,6 +169,53 @@ internal class StereoRenderer(
             )
         }
         return if (reprojecting) frame.reprojectionDegrees else -1f
+    }
+
+    /**
+     * Windows are true stereo: each eye looks from its own position (IPD / 2 sideways) with its own
+     * off-axis projection, into its eye buffer, which is then blended over the passthrough through the
+     * lens mesh. World-locked through [WorldAnchors] when the head pose is known, head-locked otherwise.
+     */
+    private fun drawWindows(frame: CameraFrame?, geometry: Array<EyeGeometry>, profile: ViewerProfile) {
+        var any = false
+        for (panel in compositor.panels.all) if (panel.hasFrame) { any = true; break }
+        if (!any) return
+
+        val scale = compositor.qualityLevel.eyeRenderScale
+        if (scale != appliedScale) rebuildEyeBuffers(geometry, scale)
+        val worldLocked = frame != null && frame.headTracking != HeadTracking.NONE
+        if (worldLocked) Mat4.fromPose(frame.viewPose, worldFromView) else Mat4.identity(worldFromView)
+        val halfIpd = profile.interLensDistanceMm / 2000f
+
+        for (eye in 0..1) {
+            val buffer = eyeBuffers[eye] ?: continue
+            buffer.bind()
+            GLES30.glClearColor(0f, 0f, 0f, 0f)
+            GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
+            Mat4.translation(if (eye == 0) -halfIpd else halfIpd, 0f, 0f, offset)
+            Mat4.multiply(worldFromView, offset, worldFromEye)
+            Mat4.rigidInverse(worldFromEye, eyeFromWorld)
+            for (panel in compositor.panels.all) {
+                if (!panel.hasFrame) continue
+                if (worldLocked && anchors.pose(panel.id, panelPose)) {
+                    Mat4.fromPose(panelPose, worldFromPanel)
+                } else {
+                    Mat4.translation(0f, 0f, -HEAD_LOCKED_DISTANCE_M, offset)
+                    Mat4.multiply(worldFromView, offset, worldFromPanel)
+                }
+                Mat4.multiply(eyeFromWorld, worldFromPanel, eyeFromPanel)
+                Mat4.multiply(projections[eye], eyeFromPanel, mvp)
+                windowPass.draw(mvp, panel, brightness = 1f)
+            }
+        }
+
+        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
+        for (eye in 0..1) {
+            val buffer = eyeBuffers[eye] ?: continue
+            val g = geometry[eye]
+            GLES30.glViewport(g.viewportX, g.viewportY, g.viewportWidth, g.viewportHeight)
+            distortionPass.drawComposite(eye, buffer.texture)
+        }
     }
 
     private fun drawTestPattern(geometry: Array<EyeGeometry>) {
@@ -176,6 +252,7 @@ internal class StereoRenderer(
         for (eye in 0..1) {
             distortionPass.upload(eye, DistortionMeshBuilder.build(geometry[eye], model))
             patternPass.update(eye, geometry[eye].eyeFov)
+            Projection.fromTanBounds(geometry[eye].eyeFov, projections[eye])
         }
         eyes = geometry
         appliedProfile = profile
@@ -205,7 +282,7 @@ internal class StereoRenderer(
         } else {
             -1f
         }
-        stats.onFrame(now, cameraAgeMs, frame?.isTracking == true, reprojectionDegrees)
+        stats.onFrame(now, cameraAgeMs, frame?.isTracking == true, reprojectionDegrees, frame?.headTracking ?: HeadTracking.NONE)
         if (now - lastPublishNs >= PUBLISH_INTERVAL_NS) {
             lastPublishNs = now
             compositor.publish(stats.snapshot())
@@ -218,5 +295,9 @@ internal class StereoRenderer(
         const val NIGHT_R = 0.043f
         const val NIGHT_G = 0.059f
         const val NIGHT_B = 0.051f
+        const val HEAD_LOCKED_DISTANCE_M = 1.5f
+
+        /** Every GL context gets a new number, so panel textures know when to be recreated. */
+        val GENERATIONS = AtomicInteger(0)
     }
 }

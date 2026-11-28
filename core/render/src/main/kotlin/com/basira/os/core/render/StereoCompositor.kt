@@ -1,12 +1,17 @@
 package com.basira.os.core.render
 
 import android.opengl.GLSurfaceView
+import android.view.Surface
 import com.basira.os.core.common.camera.CameraFrameSource
 import com.basira.os.core.common.coroutines.ApplicationScope
 import com.basira.os.core.common.logging.Logger
+import com.basira.os.core.common.panel.PanelHost
+import com.basira.os.core.common.panel.WorldAnchors
 import com.basira.os.core.common.quality.QualityLevel
 import com.basira.os.core.common.viewer.ViewerProfile
 import com.basira.os.core.render.calibration.CalibrationStore
+import com.basira.os.core.render.panel.PanelEntry
+import com.basira.os.core.render.panel.PanelTextures
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,10 +24,11 @@ import javax.inject.Singleton
 @Singleton
 class StereoCompositor @Inject constructor(
     private val frameSource: CameraFrameSource,
+    private val anchors: WorldAnchors,
     calibrationStore: CalibrationStore,
     @ApplicationScope scope: CoroutineScope,
     private val logger: Logger,
-) : Compositor {
+) : Compositor, PanelHost {
 
     private val stats = MutableStateFlow(FrameStats())
     override val frameStats: StateFlow<FrameStats> = stats.asStateFlow()
@@ -78,7 +84,22 @@ class StereoCompositor @Inject constructor(
         statsResetRequested = true
     }
 
-    override fun createRenderer(): GLSurfaceView.Renderer = StereoRenderer(this, frameSource, logger)
+    override fun createRenderer(): GLSurfaceView.Renderer = StereoRenderer(this, frameSource, anchors, logger)
+
+    internal val panels = PanelTextures()
+
+    override fun createPanel(
+        id: Int,
+        widthPx: Int,
+        heightPx: Int,
+        widthMeters: Float,
+        heightMeters: Float,
+        onSurface: (Surface) -> Unit,
+    ) {
+        panels.add(PanelEntry(id, widthPx, heightPx, widthMeters, heightMeters, onSurface))
+    }
+
+    override fun releasePanel(id: Int) = panels.remove(id)
 
     internal fun currentProfile(): ViewerProfile = previewProfile ?: storedProfile
 

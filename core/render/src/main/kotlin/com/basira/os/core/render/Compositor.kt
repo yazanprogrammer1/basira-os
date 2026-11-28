@@ -1,6 +1,7 @@
 package com.basira.os.core.render
 
 import android.opengl.GLSurfaceView
+import com.basira.os.core.common.camera.HeadTracking
 import com.basira.os.core.common.quality.QualityLevel
 import com.basira.os.core.common.viewer.ViewerProfile
 import kotlinx.coroutines.flow.StateFlow
@@ -18,6 +19,7 @@ data class FrameStats(
     val tracking: Boolean = false,
     /** Head rotation applied to the camera image this frame; -1 when reprojection is off or unavailable. */
     val reprojectionDegrees: Float = -1f,
+    val headTracking: HeadTracking = HeadTracking.NONE,
 ) {
     val jankRatio: Float get() = if (totalFrames == 0L) 0f else jankyFrames.toFloat() / totalFrames
 }
