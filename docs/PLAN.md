@@ -58,26 +58,26 @@
 | 8 | الأداء وإطلاق alpha | 20 لـ 21 | 30 دقيقة بدون خنق، والنسخة على GitHub |
 
 ### 0 · تجهيز وتجارب
-- [ ] تتأكد إن الموبايل موجود بقائمة ARCore، وإن «Google Play Services for AR» مثبّت
-- [ ] تقيس صندوق الـ VR: المسافة بين العدستين، وإذا وجهه مفتوح للكاميرا
+- [x] تتأكد إن الموبايل موجود بقائمة ARCore، وإن «Google Play Services for AR» مثبّت
+- [x] تقيس صندوق الـ VR: المسافة بين العدستين، وإذا وجهه مفتوح للكاميرا
 - [x] repo `basira-os` بالـ modules الفاضية، ومعها Hilt وversion catalog وCI
 - [x] شاشة تشخيص: ARCore، موديل الجهاز، الحرارة، معدل تحديث الشاشة، ونسخ تقرير الجهاز
-- [ ] تشغيل عينة ARCore الرسمية (hello_ar_kotlin) على جهازك وقياس الحرارة بعد 10 دقايق
-- [ ] تشغيل عينة MediaPipe Hand Landmarker وقياس الـ fps
+- [x] قياس حرارة ARCore لعشر دقايق (انعمل بتطبيقنا بالمرحلة 1 بدل العينة)
+- [x] تشغيل عينة MediaPipe Hand Landmarker وقياس الـ fps
 
 ### 1 · Passthrough لعينين
-- [ ] نرسم الـ camera texture تبع ARCore (OES) بحجمها الزاوي الصحيح (مش ممطوطة على الشاشة كلها)
-- [ ] نقسم الشاشة لعينين مع إزاحة IPD
-- [ ] shader للتشويه (barrel) بمعاملات k1 وk2
-- [ ] شاشة معايرة للـ IPD والتشويه، والقيم بتنحفظ بـ DataStore، مع مسح QR تبع Cardboard
-- [ ] عداد fps وحرارة ظاهر بوضع المطوّر
-- [ ] ThermalGovernor أولي: بيقرأ الحالة وبيطلع QualityLevel، وبيتسجّل بالـ overlay
+- [x] نرسم الـ camera texture تبع ARCore (OES) بحجمها الزاوي الصحيح (مش ممطوطة على الشاشة كلها)
+- [x] نقسم الشاشة لعينين مع إزاحة IPD
+- [x] shader للتشويه (barrel) بمعاملات k1 وk2
+- [x] شاشة معايرة للـ IPD والتشويه وحجم العرض، والقيم بتنحفظ بـ DataStore، مع profiles جاهزة (مسح QR تأجّل)
+- [x] عداد fps وحرارة ظاهر بوضع المطوّر
+- [x] ThermalGovernor أولي: بيقرأ الحالة وبيطلع QualityLevel، وبيتسجّل بالـ overlay
 
 ### 2 · نافذة ثابتة بالغرفة
 - [ ] مصفوفات view وprojection لكل عين من الـ pose تبع ARCore
 - [ ] مستطيل عليه WebView من VirtualDisplay وSurfaceTexture
 - [ ] Anchor قدّامك على بعد متر ونص
-- [ ] Late reprojection بآخر قراءة لحساس الدوران قبل عرض الفريم (انتقلت من المرحلة 8)
+- [x] Late reprojection للكاميرا بحساس الدوران (انعمل بالمرحلة 1، ومنمدّه للنوافذ)
 - [ ] إضاءة النوافذ حسب الغرفة (ARCore light estimation)
 - [ ] وضع 3DoF بحساس Rotation Vector للأجهزة بدون ARCore
 

@@ -12,13 +12,13 @@
 
 بصيرة نظام واقع مختلط بيشتغل كامل على موبايل أندرويد جوّا صندوق VR رخيص. الكاميرا الخلفية بتعرض غرفتك لعينين، ونوافذ الويب وواجهات النظام بتضل ثابتة بمكانها بالغرفة بفضل ARCore. بتتحكم بالنظر وبقرصة الإيد، وبمساعد صوتي عربي اسمه «بصيرة» بيقرأ الصفحة المفتوحة وبيلخّصها وبيتصرّف فيها.
 
-**الحالة:** المرحلة 0 (تجهيز). المشروع لسا ما بيعرض passthrough، هلّق فيه شاشة تشخيص بتفحص إذا جهازك جاهز.
+**الحالة:** المرحلة 1 خلصت: passthrough لعينين بـ 60fps، مع تشويه العدسة وreprojection ومعايرة، وجرّبناه 10 دقايق بالنظارة بدون ما يسخن الموبايل. الجاية: أول نافذة ويب ثابتة بالغرفة.
 
 </div>
 
 **Basira OS** is a phone-based mixed reality system. An Android phone in a cheap VR viewer shows the room through its back camera in stereo, and web windows and system UI stay world-locked in the room with ARCore. You control it with head gaze + pinch (MediaPipe) and «بصيرة», an Arabic-first voice assistant that can read, summarise and act on the page in a window. Everything runs on the phone.
 
-**Status:** phase 0 (setup). The app currently shows a device diagnostics screen; passthrough arrives in phase 1.
+**Status:** phase 1 done: stereo passthrough at 60 fps with lens distortion, camera reprojection and calibration, tested for 10 minutes in a viewer without throttling. Next: the first world-locked web window.
 
 ---
 
@@ -67,8 +67,8 @@ Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · Design: [docs/DESIGN.md
 
 Each phase has a gate that must pass **on a real device** before the next one starts.
 
-- [ ] **0 · Setup**: multi-module project, Hilt, CI, diagnostics screen. *Gate: ARCore and MediaPipe run on the device*
-- [ ] **1 · Stereo passthrough**: camera → two eyes, barrel distortion, calibration, basic thermal governor. *Gate: 10 min in the viewer at 60 fps without nausea*
+- [x] **0 · Setup**: multi-module project, Hilt, CI, diagnostics screen. *Gate: ARCore and MediaPipe run on the device*
+- [x] **1 · Stereo passthrough**: camera → two eyes, barrel distortion, camera reprojection, calibration, thermal governor. *Gate: 10 min in the viewer at 60 fps without nausea* ([results](docs/phases/phase-1.md))
 - [ ] **2 · World-locked window**: WebView panel anchored in the room, late reprojection, 3DoF fallback. *Gate: a page stays put while you turn and walk*
 - [ ] **3 · Gaze + pinch**: raycast cursor, MediaPipe pinch, click / scroll / drag. *Gate: 9/10 clicks hit, no ghost clicks*
 - [ ] **4 · Window manager + system UI**: dock, home, app catalog, plane snapping. *Gate: 4 windows with dock and home*
@@ -76,6 +76,19 @@ Each phase has a gate that must pass **on a real device** before the next one st
 - [ ] **6 · Screen understanding**: summarise, ask, fill forms with confirmation. *Gate: any page summarised in < 5 s*
 - [ ] **7 · Room memory**: saved spaces relative to a room origin. *Gate: windows return after restart*
 - [ ] **8 · Performance + alpha**: full thermal budget, 30-minute run, release. *Gate: 30 min without throttling*
+
+## Try it (phase 1)
+
+1. Install the debug APK, grant the camera, and open **المعايرة** (calibration) with the phone in the viewer:
+   pick your viewer (VR Shinecon / Cardboard v2), then with the **volume keys** fuse the two crosshairs (IPD),
+   straighten the grid (k1, k2) and match a real door's size (**حجم العرض**). A tap or the viewer button selects the next value.
+2. Press **ابدأ** for the stereo passthrough. Inside the viewer: **volume up** toggles camera reprojection
+   (A/B it while turning your head), **volume down** or a tap toggles the developer overlay.
+3. Every session writes a per-second CSV to `Android/data/com.basira.os/files/perf/`
+   (fps, frame-time p95, missed frames, camera age, reprojection angle, thermal status, headroom, battery temperature).
+
+How it works: [docs/phases/phase-1.md](docs/phases/phase-1.md). Measured on a Snapdragon 6 Gen 1 phone: 59.8 fps,
+0.4% missed frames and no thermal throttling over 10 minutes in a VR Shinecon viewer.
 
 ## Build
 
