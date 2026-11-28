@@ -33,8 +33,8 @@ import com.basira.os.ui.system.theme.BasiraShapes
 import java.util.Locale
 
 /**
- * Stereo passthrough. A tap (or the viewer button) opens a window or recenters it; volume down toggles the overlay;
- * volume up toggles camera reprojection for side-by-side comparison in the viewer.
+ * Stereo passthrough. A tap or volume up opens a window or recenters it; volume down toggles the overlay;
+ * a long press on volume down toggles camera reprojection (A/B in the viewer).
  */
 @Composable
 fun PassthroughScreen(viewModel: PassthroughViewModel) {

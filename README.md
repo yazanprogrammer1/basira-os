@@ -77,13 +77,14 @@ Each phase has a gate that must pass **on a real device** before the next one st
 - [ ] **7 · Room memory**: saved spaces relative to a room origin. *Gate: windows return after restart*
 - [ ] **8 · Performance + alpha**: full thermal budget, 30-minute run, release. *Gate: 30 min without throttling*
 
-## Try it (phase 1)
+## Try it
 
 1. Install the debug APK, grant the camera, and open **المعايرة** (calibration) with the phone in the viewer:
    pick your viewer (VR Shinecon / Cardboard v2), then with the **volume keys** fuse the two crosshairs (IPD),
    straighten the grid (k1, k2) and match a real door's size (**حجم العرض**). A tap or the viewer button selects the next value.
-2. Press **ابدأ** for the stereo passthrough. Inside the viewer: **volume up** toggles camera reprojection
-   (A/B it while turning your head), **volume down** or a tap toggles the developer overlay.
+2. Press **ابدأ** for the stereo passthrough. Inside the viewer: **volume up** (or a tap) opens a web window
+   in front of you, or brings it back in front of you; **volume down** toggles the developer overlay, and a
+   **long press** on it toggles camera reprojection (A/B it while turning your head).
 3. Every session writes a per-second CSV to `Android/data/com.basira.os/files/perf/`
    (fps, frame-time p95, missed frames, camera age, reprojection angle, thermal status, headroom, battery temperature).
 

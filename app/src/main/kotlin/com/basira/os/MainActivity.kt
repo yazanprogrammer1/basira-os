@@ -128,16 +128,15 @@ class MainActivity : ComponentActivity() {
         if (hasFocus) hideSystemBars()
     }
 
-    /** In calibration the volume keys tune the selected value (they still work inside the viewer). */
+    /**
+     * The volume keys are the only buttons inside a viewer without one.
+     * Passthrough: volume up opens or recenters the window; volume down toggles the overlay,
+     * and a long press on it toggles camera reprojection (A/B tests).
+     * Calibration: they tune the selected value.
+     */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (screen == AppScreen.PASSTHROUGH && event.keyCode in VOLUME_KEYS) {
-            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
-                if (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
-                    passthroughViewModel.toggleReprojection()
-                } else {
-                    passthroughViewModel.toggleOverlay()
-                }
-            }
+            handlePassthroughKey(event)
             return true
         }
         if (screen == AppScreen.CALIBRATION) {
@@ -152,6 +151,26 @@ class MainActivity : ComponentActivity() {
             }
         }
         return super.dispatchKeyEvent(event)
+    }
+
+    /** Set when the current volume-down press already fired its long-press action. */
+    private var volumeDownLongPressed = false
+
+    private fun handlePassthroughKey(event: KeyEvent) {
+        when (event.keyCode) {
+            KeyEvent.KEYCODE_VOLUME_UP ->
+                if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) passthroughViewModel.onViewerButton()
+            KeyEvent.KEYCODE_VOLUME_DOWN -> when (event.action) {
+                KeyEvent.ACTION_DOWN -> when {
+                    event.repeatCount == 0 -> volumeDownLongPressed = false
+                    event.isLongPress -> {
+                        volumeDownLongPressed = true
+                        passthroughViewModel.toggleReprojection()
+                    }
+                }
+                KeyEvent.ACTION_UP -> if (!volumeDownLongPressed) passthroughViewModel.toggleOverlay()
+            }
+        }
     }
 
     private fun navigate(target: AppScreen) {
