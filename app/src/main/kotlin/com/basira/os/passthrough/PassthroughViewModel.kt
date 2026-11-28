@@ -12,6 +12,9 @@ import com.basira.os.core.thermal.ThermalSnapshot
 import com.basira.os.core.thermal.ThermalStatusSource
 import com.basira.os.core.tracking.arcore.ArCoreSessionManager
 import com.basira.os.core.tracking.arcore.ArSessionState
+import com.basira.os.core.windows.SpatialWindowManager
+import com.basira.os.core.windows.WebSpatialWindowManager
+import com.basira.os.core.windows.WindowContent
 import com.basira.os.perf.PerfRecorder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.coroutineScope
@@ -31,6 +34,7 @@ data class OverlayState(
     val session: ArSessionState = ArSessionState.Idle,
     val reprojectionEnabled: Boolean = true,
     val visible: Boolean = true,
+    val windowCount: Int = 0,
 )
 
 @HiltViewModel
@@ -41,6 +45,7 @@ class PassthroughViewModel @Inject constructor(
     thermalSource: ThermalStatusSource,
     private val governor: ThermalGovernor,
     private val perfRecorder: PerfRecorder,
+    private val windowManager: SpatialWindowManager,
 ) : ViewModel() {
 
     private val reprojection = MutableStateFlow(compositor.reprojectionEnabled)
@@ -51,9 +56,9 @@ class PassthroughViewModel @Inject constructor(
         thermalSource.snapshots.onStart<ThermalSnapshot?> { emit(null) },
         governor.qualityLevel,
         sessions.state,
-        combine(reprojection, overlayVisible, ::Pair),
-    ) { stats, thermal, quality, session, (reproj, visible) ->
-        OverlayState(stats, thermal, quality, session, reproj, visible)
+        combine(reprojection, overlayVisible, windowManager.windows) { reproj, visible, windows -> Triple(reproj, visible, windows.size) },
+    ) { stats, thermal, quality, session, (reproj, visible, windowCount) ->
+        OverlayState(stats, thermal, quality, session, reproj, visible, windowCount)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), OverlayState())
 
     /** Volume up inside the viewer: A/B the camera reprojection. */
@@ -62,7 +67,20 @@ class PassthroughViewModel @Inject constructor(
         compositor.setReprojectionEnabled(reprojection.value)
     }
 
-    /** Volume down or a tap: hide/show the developer overlay. */
+    /**
+     * A tap or the viewer button: opens the first window, then brings it back in front of you.
+     * (Gaze + pinch arrive in phase 3.)
+     */
+    fun onViewerButton() {
+        val first = windowManager.windows.value.firstOrNull()
+        if (first == null) {
+            windowManager.open(WindowContent.Web(WebSpatialWindowManager.WELCOME_URL))
+        } else {
+            windowManager.recenter(first.id)
+        }
+    }
+
+    /** Volume down: hide/show the developer overlay. */
     fun toggleOverlay() {
         overlayVisible.value = !overlayVisible.value
     }

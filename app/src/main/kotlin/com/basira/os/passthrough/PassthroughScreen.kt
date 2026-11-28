@@ -33,7 +33,7 @@ import com.basira.os.ui.system.theme.BasiraShapes
 import java.util.Locale
 
 /**
- * Stereo passthrough. A tap (or the viewer button) or volume down toggles the developer overlay;
+ * Stereo passthrough. A tap (or the viewer button) opens a window or recenters it; volume down toggles the overlay;
  * volume up toggles camera reprojection for side-by-side comparison in the viewer.
  */
 @Composable
@@ -54,7 +54,7 @@ fun PassthroughScreen(viewModel: PassthroughViewModel) {
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    onClick = viewModel::toggleOverlay,
+                    onClick = viewModel::onViewerButton,
                 ),
         )
         val failure = overlay.session as? ArSessionState.Failed
@@ -87,7 +87,12 @@ private fun DevStats(state: OverlayState, modifier: Modifier = Modifier) {
         s.reprojectionDegrees < 0f -> "reproj n/a"
         else -> String.format(Locale.US, "reproj %.1f°", s.reprojectionDegrees)
     }
-    val line2 = "$camera · $reprojection · ${if (s.tracking) "6DoF" else "no track"} · $battery · $headroom · ${state.quality}"
+    val head = when (s.headTracking) {
+        com.basira.os.core.common.camera.HeadTracking.TRACKING -> "6DoF"
+        com.basira.os.core.common.camera.HeadTracking.HOLDING -> "holding"
+        com.basira.os.core.common.camera.HeadTracking.NONE -> "3DoF"
+    }
+    val line2 = "$camera · $reprojection · $head · win ${state.windowCount} · $battery · $headroom · ${state.quality}"
     val color = when (state.quality) {
         QualityLevel.NORMAL -> BasiraColors.Mint
         QualityLevel.WARM -> BasiraColors.Warning
